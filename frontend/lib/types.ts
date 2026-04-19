@@ -14,6 +14,17 @@ export type StockStatus =
   | "below-threshold"
   | "batch-candidate"
 
+export type ProductSupplierOption = {
+  supplierId: string
+  lastDealPrice: number
+  lastDealDate: string
+  leadTimeDays: number
+  moq: number
+  reliabilityScore: number
+  preferred: boolean
+  note?: string
+}
+
 export type Product = {
   id: string
   sku: string
@@ -33,6 +44,26 @@ export type Product = {
   conversationId: string
   invoiceId: string
   status: StockStatus
+  suppliers?: ProductSupplierOption[]
+  pendingAiAnalysis?: boolean
+}
+
+export type ThresholdChangeRequest = {
+  id: string
+  productSku: string
+  productName: string
+  currentThreshold: number
+  proposedThreshold: number
+  changePercent: number
+  reason: string
+  proposedAt: string
+  status: "pending" | "approved" | "rejected"
+  trigger:
+    | "demand-spike"
+    | "demand-drop"
+    | "lead-time-shift"
+    | "bundle-opportunity"
+    | "new-product"
 }
 
 export type Workflow = {
@@ -59,6 +90,26 @@ export type Supplier = {
   status: "preferred" | "watchlist" | "inactive"
 }
 
+export type OrderSummaryItem = {
+  sku: string
+  productName: string
+  quantity: number
+  unit: string
+  unitPrice: string
+  lineTotal: string
+}
+
+export type OrderSummary = {
+  poNumber: string
+  issuedAt: string
+  items: OrderSummaryItem[]
+  subtotal: string
+  total: string
+  deliveryBy: string
+  paymentTerms: string
+  notes?: string
+}
+
 export type NegotiationMessage = {
   id: string
   conversationId: string
@@ -74,6 +125,10 @@ export type NegotiationMessage = {
   createdAt: string
   attachmentType?: "email" | "screenshot" | "image" | "pdf" | "voice"
   attachmentLabel?: string
+  orderSummary?: OrderSummary
+  invoiceId?: string
+  language?: "EN" | "ZH" | "JA"
+  translation?: string
 }
 
 export type ConversationSource =
