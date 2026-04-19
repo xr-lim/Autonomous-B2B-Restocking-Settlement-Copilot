@@ -67,8 +67,8 @@ export function RestockOrderCard({
               asChild
               className="h-9 rounded-[10px] bg-[#3B82F6] px-4 text-white hover:bg-[#2563EB]"
             >
-              <Link href={`/conversations/${recommendation.conversationId}`}>
-                Yes, automate restock
+              <Link href={`/inventory/${recommendation.sku}`}>
+                Review & restock
               </Link>
             </Button>
             <Button

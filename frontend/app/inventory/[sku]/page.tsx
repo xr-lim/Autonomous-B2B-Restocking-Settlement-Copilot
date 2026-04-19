@@ -3,8 +3,10 @@ import { notFound } from "next/navigation"
 
 import { PageHeader } from "@/components/layout/page-header"
 import { ProductStockDemandChart } from "@/components/shared/inventory-charts"
-import { RestockOrderCard } from "@/components/shared/restock-order-card"
+import { RestockForm } from "@/components/shared/restock-form"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { SupplierOptionsPanel } from "@/components/shared/supplier-options-panel"
+import { ThresholdChangeBanner } from "@/components/shared/threshold-change-request-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -23,6 +25,7 @@ import {
   productMonthlySummaryBySku,
   restockRecommendations,
   supplierBatchAdvantageNotes,
+  thresholdChangeRequests,
 } from "@/lib/mock-data"
 import type { StatusTone, StockStatus } from "@/lib/types"
 
@@ -81,6 +84,9 @@ export default async function InventoryDetailPage({
   const restockRecommendation = restockRecommendations.find(
     (item) => item.sku === product.sku
   )
+  const pendingThresholdRequest = thresholdChangeRequests.find(
+    (item) => item.productSku === product.sku && item.status === "pending"
+  )
 
   return (
     <>
@@ -111,6 +117,10 @@ export default async function InventoryDetailPage({
         }
       />
 
+      {pendingThresholdRequest ? (
+        <ThresholdChangeBanner request={pendingThresholdRequest} />
+      ) : null}
+
       <section className="grid grid-cols-3 gap-3">
         <CompactMetric label="SKU" value={product.sku} />
         <CompactMetric label="Supplier" value={supplier?.name ?? "Unknown supplier"} />
@@ -133,8 +143,14 @@ export default async function InventoryDetailPage({
       </section>
 
       {restockRecommendation ? (
-        <RestockOrderCard recommendation={restockRecommendation} />
+        <RestockForm
+          recommendation={restockRecommendation}
+          product={product}
+          supplier={supplier}
+        />
       ) : null}
+
+      <SupplierOptionsPanel product={product} suppliers={mockSuppliers} />
 
       <ProductStockDemandChart sku={product.sku} />
 
@@ -244,8 +260,8 @@ export default async function InventoryDetailPage({
                   <TableHead className="px-4 text-[12px] text-[#9CA3AF]">
                     Same-Supplier Products
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
-                    Current Stock
+                    <TableHead className="text-[12px] text-[#9CA3AF]">
+                    Current / Max Capacity
                   </TableHead>
                   <TableHead className="text-[12px] text-[#9CA3AF]">
                     Threshold Proximity
@@ -260,10 +276,19 @@ export default async function InventoryDetailPage({
                   const proximity = Math.round(
                     (item.stockOnHand / item.aiThreshold) * 100
                   )
-                  const bundleQuantity = Math.max(
+                  const headroom = Math.max(
+                    item.maxStockAmount - item.stockOnHand,
+                    0
+                  )
+                  const rawBundleQuantity = Math.max(
                     item.aiThreshold - item.stockOnHand,
                     Math.round(item.monthlyVelocity * 0.3)
                   )
+                  const bundleQuantity = Math.min(
+                    rawBundleQuantity,
+                    headroom
+                  )
+                  const cappedByCapacity = bundleQuantity < rawBundleQuantity
 
                   return (
                     <TableRow
@@ -278,12 +303,20 @@ export default async function InventoryDetailPage({
                       </TableCell>
                       <TableCell className="text-[14px] text-[#E5E7EB]">
                         {item.stockOnHand}
+                        <span className="ml-1 text-[11px] text-[#6B7280]">
+                          / cap {item.maxStockAmount.toLocaleString("en-US")}
+                        </span>
                       </TableCell>
                       <TableCell className="text-[14px] text-[#9CA3AF]">
                         {proximity}%
                       </TableCell>
                       <TableCell className="text-[14px] font-medium text-[#E5E7EB]">
-                        {bundleQuantity}
+                        {bundleQuantity.toLocaleString("en-US")}
+                        {cappedByCapacity ? (
+                          <span className="ml-1 text-[11px] font-normal text-[#F59E0B]">
+                            (capped by max capacity)
+                          </span>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   )
@@ -304,7 +337,17 @@ export default async function InventoryDetailPage({
           </CardHeader>
           <CardContent className="space-y-4 p-5">
             <Metric label="Threshold Margin" value={`${thresholdMarginPercent}%`} />
-            <Metric label="Max Stock Amount" value={product.maxStockAmount} />
+            <Metric
+              label="Max Capacity"
+              value={product.maxStockAmount.toLocaleString("en-US")}
+            />
+            <Metric
+              label="Capacity Headroom"
+              value={`${Math.max(
+                product.maxStockAmount - product.stockOnHand,
+                0
+              ).toLocaleString("en-US")} units`}
+            />
             <div className="flex items-center justify-between rounded-[14px] border border-[#243047] bg-[#172033] p-4">
               <div>
                 <p className="text-[12px] font-medium text-[#E5E7EB]">
