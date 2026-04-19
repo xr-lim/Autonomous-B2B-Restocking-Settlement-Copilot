@@ -118,7 +118,10 @@ export default async function InventoryDetailPage({
       />
 
       {pendingThresholdRequest ? (
-        <ThresholdChangeBanner request={pendingThresholdRequest} />
+        <ThresholdChangeBanner
+          request={pendingThresholdRequest}
+          product={product}
+        />
       ) : null}
 
       <section className="grid grid-cols-3 gap-3">

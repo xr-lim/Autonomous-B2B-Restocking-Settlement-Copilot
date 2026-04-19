@@ -43,6 +43,7 @@ export default function InventoryPage() {
 
       <ThresholdChangeRequestList
         requests={thresholdChangeRequests}
+        products={mockProducts}
         description="Z.AI proposes these threshold updates based on velocity, lead time and bundle signals. Approve to apply instantly to the AI threshold column."
       />
 

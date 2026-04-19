@@ -26,6 +26,7 @@ import {
   dashboardKpis,
   insightCards,
   mockInvoices,
+  mockProducts,
   mockSuppliers,
   restockRecommendations,
   thresholdChangeRequests,
@@ -101,6 +102,7 @@ export default function DashboardPage() {
         <div className="space-y-8">
           <ThresholdChangeRequestList
             requests={thresholdChangeRequests}
+            products={mockProducts}
             maxVisible={3}
             description="Z.AI threshold updates awaiting approval."
           />

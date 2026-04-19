@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { PageHeader } from "@/components/layout/page-header"
+import { AiReasoningTrail } from "@/components/shared/ai-reasoning-trail"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { buildInvoiceReasoning } from "@/lib/ai-reasoning"
 import { mockInvoices, mockProducts, mockSuppliers } from "@/lib/mock-data"
 import type { Invoice, StatusTone } from "@/lib/types"
 
@@ -50,6 +52,7 @@ export default async function InvoiceDetailPage({
     .map((sku) => mockProducts.find((product) => product.sku === sku))
     .filter((product) => Boolean(product))
   const isCompleted = invoice.approvalState === "Completed"
+  const invoiceReasoning = buildInvoiceReasoning(invoice, supplier)
 
   return (
     <>
@@ -279,6 +282,12 @@ export default async function InvoiceDetailPage({
                   active={invoice.flags.supplierInconsistency}
                 />
               </div>
+              <AiReasoningTrail
+                id={`invoice-${invoice.id}`}
+                signals={invoiceReasoning.signals}
+                confidence={invoiceReasoning.confidence}
+                decision={invoiceReasoning.decision}
+              />
             </CardContent>
           </Card>
 
