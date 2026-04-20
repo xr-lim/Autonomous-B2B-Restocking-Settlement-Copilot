@@ -6,6 +6,12 @@ node_modules/
 out/
 build/
 
+# Stray npm lockfiles outside frontend/ (root + backend should not have them)
+/package-lock.json
+/backend/package-lock.json
+/package.json
+/backend/package.json
+
 # =========================
 # Python (Backend / Worker)
 # =========================
