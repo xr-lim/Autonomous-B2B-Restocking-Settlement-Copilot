@@ -103,7 +103,7 @@ export function ThresholdChangeRequestList({
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-[17px] font-semibold text-[#E5E7EB]">
+                <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                   {title}
                 </CardTitle>
                 <StatusBadge
@@ -111,7 +111,7 @@ export function ThresholdChangeRequestList({
                   tone={pendingRequests.length > 0 ? "ai" : "default"}
                 />
               </div>
-              <p className="mt-1.5 text-[14px] leading-6 text-[#9CA3AF]">
+              <p className="mt-1.5 text-[15px] leading-6 text-[#9CA3AF]">
                 {description}
               </p>
             </div>
@@ -119,7 +119,7 @@ export function ThresholdChangeRequestList({
 
           {collapsible ? (
             <div className="flex shrink-0 items-center gap-2">
-              <span className="text-[13px] text-[#C4B5FD]">
+              <span className="text-[14px] text-[#C4B5FD]">
                 {expanded ? "Hide" : "Review all"}
               </span>
               <ChevronDown
@@ -137,7 +137,7 @@ export function ThresholdChangeRequestList({
       {expanded ? (
         <CardContent className="border-t border-[#243047] p-0">
           {visibleRequests.length === 0 ? (
-            <div className="p-5 text-[12px] text-[#6B7280]">{emptyLabel}</div>
+            <div className="p-5 text-[14px] text-[#6B7280]">{emptyLabel}</div>
           ) : (
             <ul className="divide-y divide-[#243047]">
               {visibleRequests.map((request) => (
@@ -151,7 +151,7 @@ export function ThresholdChangeRequestList({
             </ul>
           )}
           {hiddenCount > 0 ? (
-            <div className="border-t border-[#243047] px-4 py-2 text-[11px] text-[#6B7280]">
+            <div className="border-t border-[#243047] px-4 py-2.5 text-[13px] text-[#6B7280]">
               +{hiddenCount} more pending request
               {hiddenCount > 1 ? "s" : ""}. Open inventory to review all.
             </div>
@@ -196,7 +196,7 @@ export function ThresholdChangeBanner({
                   />
                 ) : null}
               </div>
-              <p className="mt-2 text-[14px] leading-5 text-[#E5E7EB]">
+              <p className="mt-2 text-[15px] leading-6 text-[#E5E7EB]">
                 Z.AI suggests moving the AI threshold from{" "}
                 <span className="font-semibold">
                   {request.currentThreshold}
@@ -211,8 +211,8 @@ export function ThresholdChangeBanner({
                 <span
                   className={
                     positive
-                      ? "inline-flex items-center gap-0.5 text-[12px] text-[#F59E0B]"
-                      : "inline-flex items-center gap-0.5 text-[12px] text-[#10B981]"
+                      ? "inline-flex items-center gap-0.5 text-[13px] text-[#F59E0B]"
+                      : "inline-flex items-center gap-0.5 text-[13px] text-[#10B981]"
                   }
                 >
                   <DeltaIcon className="size-3" aria-hidden="true" />
@@ -220,7 +220,7 @@ export function ThresholdChangeBanner({
                   {request.changePercent}%
                 </span>
               </p>
-              <p className="mt-1.5 text-[12px] leading-5 text-[#9CA3AF]">
+              <p className="mt-1.5 text-[14px] leading-6 text-[#9CA3AF]">
                 {request.reason}
               </p>
             </div>
@@ -278,7 +278,7 @@ function ThresholdRow({
           <div className="flex items-center gap-2">
             <Link
               href={`/inventory/${request.productSku}`}
-              className="truncate text-[15px] font-semibold text-[#E5E7EB] hover:text-[#93C5FD]"
+              className="truncate text-[16px] font-semibold text-[#E5E7EB] hover:text-[#93C5FD]"
             >
               {request.productName}
             </Link>
@@ -287,16 +287,16 @@ function ThresholdRow({
               tone={triggerTone[request.trigger]}
             />
           </div>
-          <p className="mt-1 font-mono text-[12px] text-[#6B7280]">
+          <p className="mt-1 font-mono text-[13px] text-[#6B7280]">
             {request.productSku}
           </p>
-          <p className="mt-1.5 line-clamp-2 text-[13px] leading-5 text-[#9CA3AF]">
+          <p className="mt-1.5 line-clamp-2 text-[14px] leading-6 text-[#9CA3AF]">
             {request.reason}
           </p>
         </div>
 
         <div>
-          <div className="flex items-center gap-2 text-[15px] text-[#E5E7EB]">
+          <div className="flex items-center gap-2 text-[16px] text-[#E5E7EB]">
             <span className="text-[#9CA3AF]">{request.currentThreshold}</span>
             <ArrowRight
               className="size-3.5 text-[#6B7280]"
@@ -307,8 +307,8 @@ function ThresholdRow({
           <div
             className={
               positive
-                ? "mt-1 flex items-center gap-1 text-[12px] text-[#F59E0B]"
-                : "mt-1 flex items-center gap-1 text-[12px] text-[#10B981]"
+                ? "mt-1 flex items-center gap-1 text-[13px] text-[#F59E0B]"
+                : "mt-1 flex items-center gap-1 text-[13px] text-[#10B981]"
             }
           >
             <DeltaIcon className="size-3" aria-hidden="true" />
@@ -324,7 +324,7 @@ function ThresholdRow({
             type="button"
             variant="outline"
             onClick={() => onDecision(request.id, "rejected")}
-            className="h-9 rounded-[10px] border-[#243047] bg-[#172033] px-3 text-[13px] text-[#E5E7EB] hover:bg-[#243047]"
+            className="h-9 rounded-[10px] border-[#243047] bg-[#172033] px-3.5 text-[14px] text-[#E5E7EB] hover:bg-[#243047]"
           >
             <X className="size-3.5" aria-hidden="true" />
             Reject
@@ -332,7 +332,7 @@ function ThresholdRow({
           <Button
             type="button"
             onClick={() => onDecision(request.id, "approved")}
-            className="h-9 rounded-[10px] bg-[#3B82F6] px-3 text-[13px] text-white hover:bg-[#2563EB]"
+            className="h-9 rounded-[10px] bg-[#3B82F6] px-3.5 text-[14px] text-white hover:bg-[#2563EB]"
           >
             <Check className="size-3.5" aria-hidden="true" />
             Approve

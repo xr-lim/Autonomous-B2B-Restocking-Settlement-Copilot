@@ -198,14 +198,14 @@ function PriorityBrief({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`inline-flex h-6 items-center rounded-[10px] border px-2.5 text-[11px] font-semibold uppercase tracking-wider ${accent.label}`}
+              className={`inline-flex h-6 items-center rounded-[10px] border px-2.5 text-[13px] font-semibold uppercase tracking-wider ${accent.label}`}
             >
               {priority} priority
             </span>
-            <span className={`text-[13px] font-semibold ${accent.heading}`}>
+            <span className={`text-[14px] font-semibold ${accent.heading}`}>
               Why this is {priority}
             </span>
-            <span className="text-[12px] text-[#9CA3AF]">
+            <span className="text-[13px] text-[#9CA3AF]">
               {reasons.length} signal{reasons.length > 1 ? "s" : ""} detected
               by Z.AI
             </span>
@@ -214,7 +214,7 @@ function PriorityBrief({
             {reasons.map((reason) => (
               <li
                 key={reason}
-                className="flex items-start gap-2 text-[13px] leading-5 text-[#E5E7EB]"
+                className="flex items-start gap-2 text-[14px] leading-5 text-[#E5E7EB]"
               >
                 <span
                   className={`mt-1.5 size-1.5 shrink-0 rounded-full ${accent.dot}`}

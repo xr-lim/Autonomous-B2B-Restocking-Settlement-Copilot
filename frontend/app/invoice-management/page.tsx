@@ -103,15 +103,15 @@ export default function InvoiceManagementPage() {
                 <div className="border-b border-[#243047] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-[16px] font-semibold text-[#E5E7EB]">
+                      <h2 className="text-[18px] font-semibold text-[#E5E7EB]">
                         {lane.title}
                       </h2>
-                      <p className="mt-2 min-h-10 text-[12px] leading-5 text-[#9CA3AF]">
+                      <p className="mt-2 min-h-10 text-[13px] leading-5 text-[#9CA3AF]">
                         {lane.description}
                       </p>
                     </div>
                     <span
-                      className="rounded-[10px] border px-3 py-1 text-[12px] font-semibold"
+                      className="rounded-[10px] border px-3 py-1 text-[13px] font-semibold"
                       style={{
                         borderColor: `${lane.accent}66`,
                         backgroundColor: `${lane.accent}1A`,
@@ -151,14 +151,14 @@ function InvoiceWorkCard({ invoice }: { invoice: Invoice }) {
     <article className="rounded-[12px] border border-[#243047] bg-[#172033] p-4 transition hover:border-[#3B82F6]/70 hover:bg-[#1B263C]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[14px] font-semibold text-[#E5E7EB]">
+          <p className="text-[15px] font-semibold text-[#E5E7EB]">
             {invoice.id}
           </p>
-          <p className="mt-1 text-[12px] leading-5 text-[#9CA3AF]">
+          <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
             {supplierName(invoice.supplierId)}
           </p>
         </div>
-        <p className="text-right text-[14px] font-semibold text-[#E5E7EB]">
+        <p className="text-right text-[15px] font-semibold text-[#E5E7EB]">
           {invoice.currency} {invoice.amount.toLocaleString("en-US")}
         </p>
       </div>
@@ -176,14 +176,14 @@ function InvoiceWorkCard({ invoice }: { invoice: Invoice }) {
 
       <div className="mt-4 grid grid-cols-2 gap-3 rounded-[10px] bg-[#0B1020] p-3">
         <div>
-          <p className="text-[12px] text-[#6B7280]">Workflow</p>
-          <p className="mt-1 text-[12px] font-medium text-[#E5E7EB]">
+          <p className="text-[13px] text-[#6B7280]">Workflow</p>
+          <p className="mt-1 text-[13px] font-medium text-[#E5E7EB]">
             {invoice.workflowId}
           </p>
         </div>
         <div>
-          <p className="text-[12px] text-[#6B7280]">Updated</p>
-          <p className="mt-1 text-[12px] font-medium text-[#E5E7EB]">
+          <p className="text-[13px] text-[#6B7280]">Updated</p>
+          <p className="mt-1 text-[13px] font-medium text-[#E5E7EB]">
             {dateFormatter.format(new Date(invoice.lastUpdated))}
           </p>
         </div>

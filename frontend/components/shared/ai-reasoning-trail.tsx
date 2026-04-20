@@ -92,9 +92,9 @@ export function AiReasoningTrail({
   const panelId = `reasoning-${id ?? generatedId}`
 
   const isCompact = density === "compact"
-  const buttonPadding = isCompact ? "px-3 py-2" : "px-3.5 py-2.5"
-  const panelPadding = isCompact ? "p-3" : "p-4"
-  const gapY = isCompact ? "gap-y-2.5" : "gap-y-3"
+  const buttonPadding = isCompact ? "px-3.5 py-2.5" : "px-4 py-3"
+  const panelPadding = isCompact ? "p-4" : "p-5"
+  const gapY = isCompact ? "gap-y-3" : "gap-y-3.5"
 
   return (
     <div
@@ -113,15 +113,15 @@ export function AiReasoningTrail({
           buttonPadding
         )}
       >
-        <div className="flex items-center gap-2">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-[#8B5CF6]/15">
-            <Bot className="size-3.5 text-[#C4B5FD]" aria-hidden="true" />
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-[#8B5CF6]/15">
+            <Bot className="size-4 text-[#C4B5FD]" aria-hidden="true" />
           </span>
-          <span className="text-[13px] font-medium text-[#C4B5FD]">
+          <span className="text-[15px] font-medium text-[#C4B5FD]">
             {prompt}
           </span>
           {typeof confidence === "number" ? (
-            <span className="ml-1 rounded-[6px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 px-1.5 py-0.5 font-mono text-[11px] text-[#C4B5FD]">
+            <span className="ml-1 rounded-[6px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 px-2 py-0.5 font-mono text-[12px] text-[#C4B5FD]">
               {confidence}% conf
             </span>
           ) : null}
@@ -129,7 +129,7 @@ export function AiReasoningTrail({
         <ChevronDown
           aria-hidden="true"
           className={cn(
-            "size-4 shrink-0 text-[#C4B5FD] transition-transform duration-200",
+            "size-5 shrink-0 text-[#C4B5FD] transition-transform duration-200",
             open && "rotate-180"
           )}
         />
@@ -156,22 +156,22 @@ export function AiReasoningTrail({
               )}
             >
               {decision ? (
-                <div className="mb-3 rounded-[10px] border border-[#243047] bg-[#111827] px-3 py-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
+                <div className="mb-3.5 rounded-[10px] border border-[#243047] bg-[#111827] px-3.5 py-2.5">
+                  <p className="text-[12px] font-medium uppercase tracking-wider text-[#6B7280]">
                     Decision
                   </p>
-                  <p className="mt-1 text-[13px] leading-5 text-[#E5E7EB]">
+                  <p className="mt-1 text-[14px] leading-6 text-[#E5E7EB]">
                     {decision}
                   </p>
                 </div>
               ) : null}
 
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
+              <p className="mb-2.5 text-[12px] font-medium uppercase tracking-wider text-[#6B7280]">
                 Input signals used ({signals.length})
               </p>
 
               {signals.length === 0 ? (
-                <p className="text-[12px] text-[#6B7280]">{emptyHint}</p>
+                <p className="text-[14px] text-[#6B7280]">{emptyHint}</p>
               ) : (
                 <ul className={cn("grid grid-cols-1", gapY)}>
                   {signals.map((signal, index) => {
@@ -186,21 +186,21 @@ export function AiReasoningTrail({
                           delay: 0.04 + index * 0.035,
                           duration: 0.2,
                         }}
-                        className="flex items-start gap-2.5"
+                        className="flex items-start gap-3"
                       >
                         <span
                           className={cn(
-                            "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-[6px] border",
+                            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-[7px] border",
                             toneClassName[tone]
                           )}
                         >
-                          <Icon className="size-3.5" aria-hidden="true" />
+                          <Icon className="size-4" aria-hidden="true" />
                         </span>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium leading-5 text-[#E5E7EB]">
+                          <p className="text-[14px] font-medium leading-5 text-[#E5E7EB]">
                             {signal.label}
                           </p>
-                          <p className="mt-0.5 text-[12px] leading-5 text-[#9CA3AF]">
+                          <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
                             {signal.detail}
                           </p>
                         </div>
@@ -212,16 +212,16 @@ export function AiReasoningTrail({
 
               {typeof confidence === "number" ? (
                 <div className="mt-4 border-t border-[#243047] pt-3">
-                  <div className="mb-1.5 flex items-center justify-between">
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[12px] font-medium uppercase tracking-wider text-[#6B7280]">
                       Confidence
                     </span>
-                    <span className="font-mono text-[12px] font-semibold text-[#E5E7EB]">
+                    <span className="font-mono text-[14px] font-semibold text-[#E5E7EB]">
                       {confidence}%
                     </span>
                   </div>
                   <div
-                    className="h-1.5 overflow-hidden rounded-full bg-[#172033]"
+                    className="h-2 overflow-hidden rounded-full bg-[#172033]"
                     role="progressbar"
                     aria-valuenow={confidence}
                     aria-valuemin={0}

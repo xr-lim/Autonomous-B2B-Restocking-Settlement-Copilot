@@ -178,7 +178,7 @@ export function ConversationWorkspace({
         <aside className="space-y-4">
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Conversation Summary
               </CardTitle>
             </CardHeader>
@@ -197,7 +197,7 @@ export function ConversationWorkspace({
                 value={conversation.createdDate}
               />
               <div>
-                <p className="text-[12px] text-[#9CA3AF]">Current State</p>
+                <p className="text-[13px] text-[#9CA3AF]">Current State</p>
                 <div className="mt-2">
                   <StatusBadge
                     label={conversation.negotiationState}
@@ -206,7 +206,7 @@ export function ConversationWorkspace({
                 </div>
               </div>
               <div>
-                <p className="text-[12px] text-[#9CA3AF]">Linked SKU IDs</p>
+                <p className="text-[13px] text-[#9CA3AF]">Linked SKU IDs</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {conversation.linkedSkus.map((sku) => (
                     <Link key={sku} href={`/inventory/${sku}`}>
@@ -220,12 +220,12 @@ export function ConversationWorkspace({
                 </div>
               </div>
               <div>
-                <p className="text-[12px] text-[#9CA3AF]">Linked Products</p>
+                <p className="text-[13px] text-[#9CA3AF]">Linked Products</p>
                 <div className="mt-2 space-y-2">
                   {linkedProducts.map((product) => (
                     <p
                       key={product.sku}
-                      className="text-[14px] text-[#E5E7EB]"
+                      className="text-[15px] text-[#E5E7EB]"
                     >
                       {product.name}
                     </p>
@@ -237,7 +237,7 @@ export function ConversationWorkspace({
 
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Linked Product Panel
               </CardTitle>
             </CardHeader>
@@ -249,15 +249,15 @@ export function ConversationWorkspace({
                 >
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-[14px] font-medium text-[#E5E7EB]">
+                      <p className="text-[15px] font-medium text-[#E5E7EB]">
                         {product.sku}
                       </p>
-                      <p className="text-[12px] text-[#9CA3AF]">
+                      <p className="text-[13px] text-[#9CA3AF]">
                         {product.name}
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[12px] text-[#9CA3AF]">
+                  <div className="grid grid-cols-2 gap-2 text-[13px] text-[#9CA3AF]">
                     <span>Stock: {product.stockOnHand}</span>
                     <span>AI threshold: {product.aiThreshold}</span>
                   </div>
@@ -272,10 +272,10 @@ export function ConversationWorkspace({
             <CardHeader className="shrink-0 border-b border-[#243047] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+                  <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                     Negotiation Thread
                   </CardTitle>
-                  <p className="mt-1 text-[12px] text-[#9CA3AF]">
+                  <p className="mt-1 text-[13px] text-[#9CA3AF]">
                     Z.AI negotiating autonomously with {supplier?.name}
                   </p>
                 </div>
@@ -283,7 +283,7 @@ export function ConversationWorkspace({
                   <StatusBadge label="Z.AI live" tone="ai" />
                   <Button
                     type="button"
-                    className="h-8 rounded-[10px] bg-[#EF4444] px-3 text-[12px] text-white hover:bg-[#DC2626]"
+                    className="h-8 rounded-[10px] bg-[#EF4444] px-3 text-[13px] text-white hover:bg-[#DC2626]"
                   >
                     <CircleStop className="size-3.5" aria-hidden="true" />
                     Interrupt
@@ -293,7 +293,7 @@ export function ConversationWorkspace({
             </CardHeader>
 
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-              <div className="shrink-0 border-b border-[#243047] px-5 py-3 text-center text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
+              <div className="shrink-0 border-b border-[#243047] px-5 py-3 text-center text-[13px] font-medium uppercase tracking-wider text-[#6B7280]">
                 PO PDF dispatched to supplier · Z.AI running negotiation loop
               </div>
 
@@ -304,7 +304,7 @@ export function ConversationWorkspace({
                       className="size-4 text-[#C4B5FD]"
                       aria-hidden="true"
                     />
-                    <span className="text-[12px] text-[#E5E7EB]">
+                    <span className="text-[13px] text-[#E5E7EB]">
                       Supplier communicates in{" "}
                       <span className="font-semibold text-[#C4B5FD]">
                         {conversation.aiExtraction.supplierLanguage}
@@ -338,25 +338,25 @@ export function ConversationWorkspace({
                 <div className="ml-8 max-w-[86%] rounded-[14px] border border-[#8B5CF6]/30 bg-[#111827] p-4 shadow-lg shadow-black/10">
                   <div className="mb-3 flex items-center gap-2">
                     <StatusBadge label="Z.AI autonomous draft" tone="ai" />
-                    <span className="text-[12px] text-[#9CA3AF]">
+                    <span className="text-[13px] text-[#9CA3AF]">
                       auto-send queued
                     </span>
                   </div>
-                  <p className="text-[14px] leading-6 text-[#E5E7EB]">
+                  <p className="text-[15px] leading-6 text-[#E5E7EB]">
                     We can accept the split delivery only if freight is capped
                     and the second shipment quantity is confirmed. If volume
                     increases to the AI recommended bundle, can you meet the
                     target range of {conversation.targetPriceRange}?
                   </p>
                   <div className="mt-4 rounded-[10px] border border-[#243047] bg-[#172033] p-3">
-                    <p className="text-[12px] font-medium text-[#C4B5FD]">
+                    <p className="text-[13px] font-medium text-[#C4B5FD]">
                       Z.AI automation rationale
                     </p>
-                    <p className="mt-1 text-[12px] leading-5 text-[#9CA3AF]">
+                    <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
                       {conversation.nextAction.negotiationSummary}
                     </p>
                   </div>
-                  <p className="mt-4 text-[12px] text-[#9CA3AF]">
+                  <p className="mt-4 text-[13px] text-[#9CA3AF]">
                     No approval required. Z.AI continues automatically unless
                     the operator interrupts.
                   </p>
@@ -365,7 +365,7 @@ export function ConversationWorkspace({
 
               <div className="shrink-0 border-t border-[#243047] bg-[#0B1020] p-4">
                 <textarea
-                  className="mb-3 min-h-[72px] w-full resize-none rounded-[10px] border border-[#243047] bg-[#172033] p-3 text-[14px] text-[#E5E7EB] outline-none placeholder:text-[#6B7280] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                  className="mb-3 min-h-[72px] w-full resize-none rounded-[10px] border border-[#243047] bg-[#172033] p-3 text-[15px] text-[#E5E7EB] outline-none placeholder:text-[#6B7280] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
                   placeholder="Optional operator note. Use Interrupt to stop Z.AI before it sends."
                 />
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -410,10 +410,10 @@ export function ConversationWorkspace({
         <aside className="space-y-4">
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 AI Extraction Panel
               </CardTitle>
-              <p className="mt-1 text-[12px] text-[#9CA3AF]">
+              <p className="mt-1 text-[13px] text-[#9CA3AF]">
                 Hover a field to highlight the source message Z.AI parsed it
                 from.
               </p>
@@ -454,7 +454,7 @@ export function ConversationWorkspace({
                 onMouseLeave={() => handleFieldHover(null)}
                 className="rounded-[10px] p-2 -m-2 transition-colors hover:bg-[#172033]/60"
               >
-                <p className="text-[12px] text-[#9CA3AF]">Missing Fields</p>
+                <p className="text-[13px] text-[#9CA3AF]">Missing Fields</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {conversation.aiExtraction.missingFields.length > 0 ? (
                     conversation.aiExtraction.missingFields.map((field) => (
@@ -467,10 +467,10 @@ export function ConversationWorkspace({
               </div>
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[12px] text-[#9CA3AF]">
+                  <span className="text-[13px] text-[#9CA3AF]">
                     Confidence Score
                   </span>
-                  <span className="text-[14px] font-semibold text-[#E5E7EB]">
+                  <span className="text-[15px] font-semibold text-[#E5E7EB]">
                     {conversation.aiExtraction.confidenceScore}%
                   </span>
                 </div>
@@ -495,16 +495,16 @@ export function ConversationWorkspace({
 
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Next Action Panel
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
               <div className="rounded-[14px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 p-4">
-                <p className="text-[12px] font-medium text-[#C4B5FD]">
+                <p className="text-[13px] font-medium text-[#C4B5FD]">
                   Recommended next step
                 </p>
-                <p className="mt-2 text-[14px] leading-6 text-[#E5E7EB]">
+                <p className="mt-2 text-[15px] leading-6 text-[#E5E7EB]">
                   {conversation.nextAction.recommendedNextStep}
                 </p>
               </div>
@@ -513,7 +513,7 @@ export function ConversationWorkspace({
                 value={conversation.nextAction.negotiationSummary}
               />
               <div>
-                <p className="text-[12px] text-[#9CA3AF]">
+                <p className="text-[13px] text-[#9CA3AF]">
                   Linked Invoice Status
                 </p>
                 <div className="mt-2 flex items-center gap-2">
@@ -524,7 +524,7 @@ export function ConversationWorkspace({
                   {linkedInvoice ? (
                     <Link
                       href={`/invoice-management/${linkedInvoice.id}`}
-                      className="text-[12px] font-medium text-[#3B82F6] hover:text-[#93C5FD]"
+                      className="text-[13px] font-medium text-[#3B82F6] hover:text-[#93C5FD]"
                     >
                       Open invoice
                     </Link>
@@ -548,8 +548,8 @@ export function ConversationWorkspace({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[12px] text-[#9CA3AF]">{label}</p>
-      <p className="mt-1 text-[14px] leading-6 text-[#E5E7EB]">{value}</p>
+      <p className="text-[13px] text-[#9CA3AF]">{label}</p>
+      <p className="mt-1 text-[15px] leading-6 text-[#E5E7EB]">{value}</p>
     </div>
   )
 }
@@ -574,14 +574,14 @@ function HoverableField({
       tabIndex={0}
       className="group -m-2 rounded-[10px] p-2 outline-none transition-colors hover:bg-[#172033]/60 focus-visible:bg-[#172033]/60 focus-visible:ring-1 focus-visible:ring-[#8B5CF6]/40"
     >
-      <p className="flex items-center gap-1.5 text-[12px] text-[#9CA3AF]">
+      <p className="flex items-center gap-1.5 text-[13px] text-[#9CA3AF]">
         {label}
         <span
           aria-hidden="true"
           className="hidden size-1 rounded-full bg-[#8B5CF6] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 sm:inline-block"
         />
       </p>
-      <p className="mt-1 text-[14px] leading-6 text-[#E5E7EB]">{value}</p>
+      <p className="mt-1 text-[15px] leading-6 text-[#E5E7EB]">{value}</p>
     </div>
   )
 }
@@ -654,12 +654,12 @@ function MessageBubble({
               <StatusBadge label="Evidence source" tone="ai" />
             ) : null}
           </div>
-          <span className="text-[12px] text-[#6B7280]">
+          <span className="text-[13px] text-[#6B7280]">
             {message.author} / {message.sentiment}
           </span>
         </div>
         <p
-          className="text-[14px] leading-6 text-[#E5E7EB]"
+          className="text-[15px] leading-6 text-[#E5E7EB]"
           lang={
             message.language === "ZH"
               ? "zh"
@@ -672,11 +672,11 @@ function MessageBubble({
         </p>
         {message.translation ? (
           <div className="mt-3 rounded-[10px] border border-dashed border-[#8B5CF6]/30 bg-[#8B5CF6]/5 p-3">
-            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-[#C4B5FD]">
+            <div className="mb-1 flex items-center gap-1.5 text-[13px] font-medium uppercase tracking-wider text-[#C4B5FD]">
               <Languages className="size-3" aria-hidden="true" />
               Z.AI translation · EN
             </div>
-            <p className="text-[12px] leading-5 text-[#9CA3AF]">
+            <p className="text-[13px] leading-5 text-[#9CA3AF]">
               {message.translation}
             </p>
           </div>
@@ -699,7 +699,7 @@ function MessageBubble({
         ) : null}
       </div>
       {isSupplier ? (
-        <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#273044] text-[11px] font-semibold text-[#CBD5E1]">
+        <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#273044] text-[13px] font-semibold text-[#CBD5E1]">
           AP
         </div>
       ) : null}
@@ -736,7 +736,7 @@ function SupplierInvoiceFrame({
       <div className="flex items-center justify-between gap-3 border-b border-[#243047] bg-[#F59E0B]/10 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <ReceiptText className="size-4 text-[#FBBF24]" aria-hidden="true" />
-          <span className="text-[12px] font-semibold uppercase tracking-wider text-[#FBBF24]">
+          <span className="text-[13px] font-semibold uppercase tracking-wider text-[#FBBF24]">
             Invoice received
           </span>
         </div>
@@ -770,15 +770,15 @@ function SupplierInvoiceFrame({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium text-[#E5E7EB]">
+          <p className="truncate text-[14px] font-medium text-[#E5E7EB]">
             {attachmentLabel ?? invoice.fileName}
           </p>
-          <p className="mt-0.5 text-[11px] text-[#9CA3AF]">
+          <p className="mt-0.5 text-[13px] text-[#9CA3AF]">
             {invoice.sourceType} · {invoice.fileSize} ·{" "}
             {invoice.validationStatus}
           </p>
         </div>
-        <span className="flex items-center gap-1 text-[11px] font-medium text-[#93C5FD]">
+        <span className="flex items-center gap-1 text-[13px] font-medium text-[#93C5FD]">
           <Maximize2 className="size-3" aria-hidden="true" />
           Preview
         </span>
@@ -792,22 +792,22 @@ function SupplierInvoiceFrame({
       </div>
 
       <div className="px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-[#9CA3AF]">
+        <p className="text-[13px] font-medium uppercase tracking-wider text-[#9CA3AF]">
           Z.AI risk signal
         </p>
-        <p className="mt-1 text-[12px] leading-5 text-[#E5E7EB]">
+        <p className="mt-1 text-[13px] leading-5 text-[#E5E7EB]">
           {invoice.riskReason}
         </p>
-        <p className="mt-1 text-[11px] text-[#9CA3AF]">{varianceDisplay}</p>
+        <p className="mt-1 text-[13px] text-[#9CA3AF]">{varianceDisplay}</p>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#243047] bg-[#111827] px-4 py-3">
-        <span className="text-[11px] text-[#9CA3AF]">
+        <span className="text-[13px] text-[#9CA3AF]">
           Routed to Invoice Management · {invoice.id}
         </span>
         <Button
           asChild
-          className="h-8 rounded-[10px] bg-[#3B82F6] px-3 text-[12px] text-white hover:bg-[#2563EB]"
+          className="h-8 rounded-[10px] bg-[#3B82F6] px-3 text-[13px] text-white hover:bg-[#2563EB]"
         >
           <Link href={`/invoice-management/${invoice.id}`}>
             <ReceiptText className="size-3.5" aria-hidden="true" />
@@ -830,12 +830,12 @@ function InvoiceField({
 }) {
   return (
     <div className="border-r border-[#243047] px-4 py-3 last:border-r-0">
-      <p className="text-[11px] text-[#9CA3AF]">{label}</p>
+      <p className="text-[13px] text-[#9CA3AF]">{label}</p>
       <p
         className={
           emphasis
-            ? "mt-1 truncate text-[14px] font-semibold text-[#FBBF24]"
-            : "mt-1 truncate text-[13px] font-medium text-[#E5E7EB]"
+            ? "mt-1 truncate text-[15px] font-semibold text-[#FBBF24]"
+            : "mt-1 truncate text-[14px] font-medium text-[#E5E7EB]"
         }
       >
         {value}
@@ -880,7 +880,7 @@ function AttachmentPreview({
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[12px] font-medium text-[#9CA3AF] transition-colors hover:bg-[#172033]/60"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[13px] font-medium text-[#9CA3AF] transition-colors hover:bg-[#172033]/60"
       >
         <div className="flex min-w-0 items-center gap-2">
           <Icon
@@ -894,7 +894,7 @@ function AttachmentPreview({
           {showParsedBadge ? (
             <StatusBadge label="Parsed by Z.AI" tone="success" />
           ) : null}
-          <span className="flex items-center gap-1 text-[11px] font-medium text-[#93C5FD]">
+          <span className="flex items-center gap-1 text-[13px] font-medium text-[#93C5FD]">
             {type === "image" || type === "screenshot" ? (
               <ZoomIn className="size-3" aria-hidden="true" />
             ) : (
@@ -916,7 +916,7 @@ function AttachmentPreview({
         <button
           type="button"
           onClick={onClick}
-          className="flex w-full items-center gap-3 border-t border-[#243047] bg-[#172033] px-3 py-3 text-left text-[12px] leading-5 text-[#9CA3AF] transition-colors hover:bg-[#1C2744]"
+          className="flex w-full items-center gap-3 border-t border-[#243047] bg-[#172033] px-3 py-3 text-left text-[13px] leading-5 text-[#9CA3AF] transition-colors hover:bg-[#1C2744]"
         >
           <Waveform />
           <span>
@@ -966,20 +966,20 @@ function OrderPdfPreview({ summary }: { summary: OrderSummary }) {
     <div className="border-t border-[#243047] bg-[#0B1220]">
       <div className="flex items-start justify-between gap-3 border-b border-[#243047] px-4 py-3">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-[#9CA3AF]">
+          <p className="text-[13px] font-medium uppercase tracking-wider text-[#9CA3AF]">
             Purchase order
           </p>
-          <p className="mt-1 text-[14px] font-semibold text-[#E5E7EB]">
+          <p className="mt-1 text-[15px] font-semibold text-[#E5E7EB]">
             {summary.poNumber}
           </p>
         </div>
-        <div className="text-right text-[11px] text-[#9CA3AF]">
+        <div className="text-right text-[13px] text-[#9CA3AF]">
           <p>Issued {summary.issuedAt}</p>
           <p className="mt-1">Deliver by {summary.deliveryBy}</p>
         </div>
       </div>
       <div className="px-4 pt-3">
-        <div className="grid grid-cols-[1.4fr_80px_110px_110px] gap-2 border-b border-[#243047] pb-2 text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
+        <div className="grid grid-cols-[1.4fr_80px_110px_110px] gap-2 border-b border-[#243047] pb-2 text-[13px] font-medium uppercase tracking-wider text-[#6B7280]">
           <span>Item</span>
           <span className="text-right">Qty</span>
           <span className="text-right">Unit Price</span>
@@ -989,13 +989,13 @@ function OrderPdfPreview({ summary }: { summary: OrderSummary }) {
           {summary.items.map((item) => (
             <div
               key={item.sku}
-              className="grid grid-cols-[1.4fr_80px_110px_110px] gap-2 py-2 text-[12px]"
+              className="grid grid-cols-[1.4fr_80px_110px_110px] gap-2 py-2 text-[13px]"
             >
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-medium text-[#E5E7EB]">
+                <p className="truncate text-[14px] font-medium text-[#E5E7EB]">
                   {item.productName}
                 </p>
-                <p className="text-[11px] text-[#6B7280]">{item.sku}</p>
+                <p className="text-[13px] text-[#6B7280]">{item.sku}</p>
               </div>
               <span className="text-right text-[#E5E7EB]">
                 {item.quantity.toLocaleString("en-US")} {item.unit}
@@ -1009,24 +1009,24 @@ function OrderPdfPreview({ summary }: { summary: OrderSummary }) {
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3 border-t border-[#243047] bg-[#111827] px-4 py-3 text-[12px]">
+      <div className="grid grid-cols-3 gap-3 border-t border-[#243047] bg-[#111827] px-4 py-3 text-[13px]">
         <div>
-          <p className="text-[11px] text-[#6B7280]">Subtotal</p>
+          <p className="text-[13px] text-[#6B7280]">Subtotal</p>
           <p className="mt-1 font-semibold text-[#E5E7EB]">{summary.subtotal}</p>
         </div>
         <div>
-          <p className="text-[11px] text-[#6B7280]">Payment terms</p>
+          <p className="text-[13px] text-[#6B7280]">Payment terms</p>
           <p className="mt-1 font-semibold text-[#E5E7EB]">
             {summary.paymentTerms}
           </p>
         </div>
         <div>
-          <p className="text-[11px] text-[#6B7280]">Total</p>
+          <p className="text-[13px] text-[#6B7280]">Total</p>
           <p className="mt-1 font-semibold text-[#C4B5FD]">{summary.total}</p>
         </div>
       </div>
       {summary.notes ? (
-        <div className="border-t border-[#243047] px-4 py-3 text-[12px] leading-5 text-[#9CA3AF]">
+        <div className="border-t border-[#243047] px-4 py-3 text-[13px] leading-5 text-[#9CA3AF]">
           <span className="font-medium text-[#C4B5FD]">Note · </span>
           {summary.notes}
         </div>
@@ -1085,10 +1085,10 @@ function EvidenceBody({
   return (
     <>
       <SheetHeader className="border-b border-[#243047] px-5 pb-4 pt-5">
-        <SheetTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+        <SheetTitle className="text-[18px] font-semibold text-[#E5E7EB]">
           {title}
         </SheetTitle>
-        <SheetDescription className="text-[12px] text-[#9CA3AF]">
+        <SheetDescription className="text-[13px] text-[#9CA3AF]">
           {subtitle}
         </SheetDescription>
       </SheetHeader>
@@ -1121,18 +1121,18 @@ function EvidenceBody({
 function EvidenceMetaCard({ message }: { message: NegotiationMessage }) {
   return (
     <div className="rounded-[12px] border border-[#243047] bg-[#111827] p-4">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-[#9CA3AF]">
+      <p className="text-[13px] font-medium uppercase tracking-wider text-[#9CA3AF]">
         Source message
       </p>
-      <p className="mt-2 text-[13px] leading-6 text-[#E5E7EB]">
+      <p className="mt-2 text-[14px] leading-6 text-[#E5E7EB]">
         {message.body}
       </p>
       {message.translation ? (
         <div className="mt-3 rounded-[10px] border border-dashed border-[#8B5CF6]/30 bg-[#8B5CF6]/5 p-3">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-[#C4B5FD]">
+          <p className="text-[13px] font-medium uppercase tracking-wider text-[#C4B5FD]">
             Z.AI translation
           </p>
-          <p className="mt-1 text-[12px] leading-5 text-[#9CA3AF]">
+          <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
             {message.translation}
           </p>
         </div>
@@ -1145,7 +1145,7 @@ function ImagePreviewBody({ message }: { message: NegotiationMessage }) {
   return (
     <div className="rounded-[12px] border border-[#243047] bg-[#0F1728] p-4">
       <div className="relative aspect-[4/3] overflow-hidden rounded-[10px] border border-[#243047] bg-[linear-gradient(135deg,#172033,#111827_40%,#243047_80%,#1F2A44)]">
-        <div className="absolute inset-x-4 top-4 flex items-center justify-between text-[11px] text-[#94A3B8]">
+        <div className="absolute inset-x-4 top-4 flex items-center justify-between text-[13px] text-[#94A3B8]">
           <span>{message.attachmentLabel}</span>
           <span className="font-mono">JPG · 1.2 MB</span>
         </div>
@@ -1155,7 +1155,7 @@ function ImagePreviewBody({ message }: { message: NegotiationMessage }) {
           <span className="h-3 w-3/4 rounded bg-[#334155]/60" />
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] text-[#9CA3AF]">
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[13px] text-[#9CA3AF]">
         <span>Auto-detected: hand-written route board</span>
         <span>OCR confidence: 84%</span>
       </div>
@@ -1173,10 +1173,10 @@ function PdfPreviewBody({ message }: { message: NegotiationMessage }) {
             className="rounded-[10px] border border-[#243047] bg-[#F8FAFC] p-5 text-[#111827]"
           >
             <div className="mb-4 flex items-center justify-between border-b border-[#CBD5E1] pb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
+              <span className="text-[13px] font-semibold uppercase tracking-wider">
                 {message.attachmentLabel ?? "Document"} · page {index + 1}
               </span>
-              <span className="text-[10px] text-[#64748B]">A4</span>
+              <span className="text-[12px] text-[#64748B]">A4</span>
             </div>
             <div className="space-y-2">
               <div className="h-3 w-3/4 rounded bg-[#CBD5E1]" />
@@ -1235,7 +1235,7 @@ function VoicePreviewBody({ message }: { message: NegotiationMessage }) {
           )}
         </Button>
         <div className="flex-1">
-          <p className="text-[12px] font-medium text-[#E5E7EB]">
+          <p className="text-[13px] font-medium text-[#E5E7EB]">
             {message.attachmentLabel ?? "voice-note.m4a"}
           </p>
           <div className="mt-2 flex h-8 items-end gap-0.5">
@@ -1259,11 +1259,11 @@ function VoicePreviewBody({ message }: { message: NegotiationMessage }) {
             ))}
           </div>
         </div>
-        <span className="font-mono text-[11px] text-[#9CA3AF]">00:22</span>
+        <span className="font-mono text-[13px] text-[#9CA3AF]">00:22</span>
       </div>
 
       <div className="mt-4 space-y-2">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-[#9CA3AF]">
+        <p className="text-[13px] font-medium uppercase tracking-wider text-[#9CA3AF]">
           Transcript
         </p>
         {transcriptSegments.map((segment) => (
@@ -1271,15 +1271,15 @@ function VoicePreviewBody({ message }: { message: NegotiationMessage }) {
             key={segment.time}
             className="flex gap-3 rounded-[10px] border border-[#243047] bg-[#111827] p-3"
           >
-            <span className="font-mono text-[11px] text-[#6B7280]">
+            <span className="font-mono text-[13px] text-[#6B7280]">
               {segment.time}
             </span>
             <div className="flex-1">
-              <p className="text-[13px] leading-5 text-[#E5E7EB]">
+              <p className="text-[14px] leading-5 text-[#E5E7EB]">
                 {segment.text}
               </p>
               {segment.tag ? (
-                <span className="mt-1 inline-flex items-center rounded-[6px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#C4B5FD]">
+                <span className="mt-1 inline-flex items-center rounded-[6px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 px-1.5 py-0.5 text-[12px] font-medium text-[#C4B5FD]">
                   {segment.tag}
                 </span>
               ) : null}
@@ -1301,7 +1301,7 @@ function EmailPreviewBody({
   return (
     <div className="rounded-[12px] border border-[#243047] bg-[#0F1728] p-4">
       <div className="rounded-[10px] border border-[#243047] bg-[#F8FAFC] p-4 text-[#111827]">
-        <div className="space-y-1 border-b border-[#E2E8F0] pb-2 text-[11px]">
+        <div className="space-y-1 border-b border-[#E2E8F0] pb-2 text-[13px]">
           <p>
             <span className="font-semibold">From:</span>{" "}
             {supplier?.name ?? "Supplier"} &lt;sales@supplier.example&gt;
@@ -1314,7 +1314,7 @@ function EmailPreviewBody({
             {message.attachmentLabel ?? "Re: Replenishment terms"}
           </p>
         </div>
-        <p className="mt-3 text-[12px] leading-5">{message.body}</p>
+        <p className="mt-3 text-[13px] leading-5">{message.body}</p>
       </div>
     </div>
   )
@@ -1332,19 +1332,19 @@ function InvoiceDocumentPreview({
       <div className="rounded-[10px] border border-[#243047] bg-[#F8FAFC] p-5 text-[#111827]">
         <div className="mb-4 flex items-start justify-between border-b border-[#CBD5E1] pb-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
+            <p className="text-[13px] font-semibold uppercase tracking-wider text-[#64748B]">
               Invoice
             </p>
-            <p className="text-[16px] font-semibold">
+            <p className="text-[18px] font-semibold">
               {invoice.invoiceNumber}
             </p>
           </div>
-          <div className="text-right text-[11px] text-[#64748B]">
+          <div className="text-right text-[13px] text-[#64748B]">
             <p>{supplier?.name ?? "Supplier"}</p>
             <p>Due {invoice.dueDate}</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-[11px]">
+        <div className="grid grid-cols-2 gap-3 text-[13px]">
           <div>
             <p className="text-[#64748B]">Bill to</p>
             <p className="font-semibold">Bee2Bee Procurement</p>
@@ -1355,12 +1355,12 @@ function InvoiceDocumentPreview({
           </div>
         </div>
         <div className="mt-4 border-t border-[#CBD5E1] pt-3">
-          <div className="grid grid-cols-[1fr_80px_110px] gap-2 border-b border-[#CBD5E1] pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">
+          <div className="grid grid-cols-[1fr_80px_110px] gap-2 border-b border-[#CBD5E1] pb-1.5 text-[12px] font-semibold uppercase tracking-wider text-[#64748B]">
             <span>Item</span>
             <span className="text-right">Qty</span>
             <span className="text-right">Amount</span>
           </div>
-          <div className="grid grid-cols-[1fr_80px_110px] gap-2 border-b border-[#E2E8F0] py-2 text-[12px]">
+          <div className="grid grid-cols-[1fr_80px_110px] gap-2 border-b border-[#E2E8F0] py-2 text-[13px]">
             <span>{invoice.linkedSkus.join(", ")}</span>
             <span className="text-right">
               {invoice.invoiceQuantity.toLocaleString("en-US")}
@@ -1369,18 +1369,18 @@ function InvoiceDocumentPreview({
               {invoice.currency} {invoice.subtotal.toLocaleString("en-US")}
             </span>
           </div>
-          <div className="mt-2 flex justify-end gap-6 text-[12px]">
+          <div className="mt-2 flex justify-end gap-6 text-[13px]">
             <span className="text-[#64748B]">Total</span>
             <span className="font-semibold">
               {invoice.currency} {invoice.amount.toLocaleString("en-US")}
             </span>
           </div>
         </div>
-        <div className="mt-4 rounded-[8px] bg-[#F1F5F9] p-3 text-[10px] text-[#64748B]">
+        <div className="mt-4 rounded-[8px] bg-[#F1F5F9] p-3 text-[12px] text-[#64748B]">
           Remit to: {invoice.bankDetails}
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] text-[#9CA3AF]">
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[13px] text-[#9CA3AF]">
         <span>Validation: {invoice.validationStatus}</span>
         <span>Confidence: {invoice.riskConfidence}%</span>
       </div>

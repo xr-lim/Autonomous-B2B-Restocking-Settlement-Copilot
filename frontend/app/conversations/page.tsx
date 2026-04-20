@@ -129,10 +129,10 @@ export default function ConversationsPage() {
               <CardHeader className="border-b border-[#243047] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+                    <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                       {group.title}
                     </CardTitle>
-                    <p className="mt-1 text-[12px] leading-5 text-[#9CA3AF]">
+                    <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
                       {group.description}
                     </p>
                   </div>
@@ -165,10 +165,10 @@ export default function ConversationsPage() {
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-[20px] font-semibold text-[#E5E7EB]">
+            <h2 className="text-[22px] font-semibold text-[#E5E7EB]">
               All Conversations
             </h2>
-            <p className="mt-1 text-[14px] text-[#9CA3AF]">
+            <p className="mt-1 text-[15px] text-[#9CA3AF]">
               Default sorted by latest update. Use search and filters to narrow by
               supplier, SKU, state, or source.
             </p>
@@ -182,34 +182,34 @@ export default function ConversationsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-[#243047] hover:bg-transparent">
-                  <TableHead className="px-4 text-[12px] text-[#9CA3AF]">
+                  <TableHead className="px-4 text-[13px] text-[#9CA3AF]">
                     Conversation ID
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Supplier
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Linked SKU(s)
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Product
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Source
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Latest Message
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Status
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Last Updated
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Priority
                   </TableHead>
-                  <TableHead className="text-[12px] text-[#9CA3AF]">
+                  <TableHead className="text-[13px] text-[#9CA3AF]">
                     Action
                   </TableHead>
                 </TableRow>
@@ -220,22 +220,22 @@ export default function ConversationsPage() {
                     key={conversation.id}
                     className="border-[#243047] hover:bg-[#172033]/70"
                   >
-                    <TableCell className="px-4 text-[12px] font-medium text-[#E5E7EB]">
+                    <TableCell className="px-4 text-[13px] font-medium text-[#E5E7EB]">
                       {conversation.id}
                     </TableCell>
-                    <TableCell className="text-[14px] text-[#E5E7EB]">
+                    <TableCell className="text-[15px] text-[#E5E7EB]">
                       {supplierName(conversation.supplierId)}
                     </TableCell>
                     <TableCell>
                       <SkuLinks skus={conversation.linkedSkus} />
                     </TableCell>
-                    <TableCell className="max-w-[220px] whitespace-normal text-[14px] leading-5 text-[#9CA3AF]">
+                    <TableCell className="max-w-[220px] whitespace-normal text-[15px] leading-5 text-[#9CA3AF]">
                       {conversation.linkedSkus.map(productName).join(", ")}
                     </TableCell>
                     <TableCell>
                       <StatusBadge label={conversation.source} tone="ai" />
                     </TableCell>
-                    <TableCell className="max-w-[300px] whitespace-normal text-[14px] leading-5 text-[#9CA3AF]">
+                    <TableCell className="max-w-[300px] whitespace-normal text-[15px] leading-5 text-[#9CA3AF]">
                       {conversation.latestMessage}
                     </TableCell>
                     <TableCell>
@@ -244,7 +244,7 @@ export default function ConversationsPage() {
                         tone={stateTone[conversation.negotiationState]}
                       />
                     </TableCell>
-                    <TableCell className="text-[12px] text-[#9CA3AF]">
+                    <TableCell className="text-[13px] text-[#9CA3AF]">
                       {dateFormatter.format(new Date(conversation.lastMessageAt))}
                     </TableCell>
                     <TableCell>
@@ -280,7 +280,7 @@ function ConversationMiniCard({ conversation }: { conversation: Conversation }) 
       className="block rounded-[10px] border border-[#243047] bg-[#172033] p-3 transition-colors hover:border-[#3B82F6] hover:bg-[#1B263A]"
     >
       <div className="mb-2 flex items-start justify-between gap-2">
-        <span className="text-[13px] font-semibold text-[#E5E7EB]">
+        <span className="text-[14px] font-semibold text-[#E5E7EB]">
           {conversation.id}
         </span>
         <StatusBadge
@@ -288,7 +288,7 @@ function ConversationMiniCard({ conversation }: { conversation: Conversation }) 
           tone={priorityTone[conversation.priority]}
         />
       </div>
-      <p className="line-clamp-2 text-[12px] leading-5 text-[#9CA3AF]">
+      <p className="line-clamp-2 text-[13px] leading-5 text-[#9CA3AF]">
         {conversation.subject}
       </p>
       <div className="mt-3">

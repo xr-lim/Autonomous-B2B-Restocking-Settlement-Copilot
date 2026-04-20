@@ -25,7 +25,7 @@ export function StatusBadge({
     <Badge
       variant="outline"
       className={cn(
-        "h-6 rounded-[10px] border px-2.5 text-[12px] font-medium",
+        "h-7 rounded-[10px] border px-2.5 text-[13px] font-medium",
         toneClassName[tone],
         className
       )}

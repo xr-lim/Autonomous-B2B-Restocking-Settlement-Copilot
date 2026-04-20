@@ -82,7 +82,7 @@ export default async function InvoiceDetailPage({
         <SummaryTile label="Invoice ID" value={invoice.id} />
         <SummaryTile label="Supplier" value={supplier?.name ?? "Unknown supplier"} />
         <div className="rounded-[10px] border border-[#243047] bg-[#111827] p-4">
-          <p className="text-[12px] text-[#9CA3AF]">Linked SKU(s)</p>
+          <p className="text-[13px] text-[#9CA3AF]">Linked SKU(s)</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {invoice.linkedSkus.map((sku) => (
               <Link key={sku} href={`/inventory/${sku}`}>
@@ -97,7 +97,7 @@ export default async function InvoiceDetailPage({
         </div>
         <SummaryTile label="Workflow ID" value={invoice.workflowId} />
         <div className="rounded-[10px] border border-[#243047] bg-[#111827] p-4">
-          <p className="text-[12px] text-[#9CA3AF]">Approval State</p>
+          <p className="text-[13px] text-[#9CA3AF]">Approval State</p>
           <div className="mt-2">
             <StatusBadge
               label={invoice.approvalState}
@@ -111,17 +111,17 @@ export default async function InvoiceDetailPage({
         <main className="space-y-6">
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Invoice Preview
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-[280px_1fr] gap-5 p-5">
               <div className="flex h-[360px] flex-col rounded-[12px] border border-[#243047] bg-[#F8FAFC] p-5 text-[#111827]">
                 <div className="mb-6 flex items-center justify-between border-b border-[#CBD5E1] pb-3">
-                  <span className="text-[12px] font-semibold">INVOICE</span>
-                  <span className="text-[12px]">{invoice.invoiceNumber}</span>
+                  <span className="text-[13px] font-semibold">INVOICE</span>
+                  <span className="text-[13px]">{invoice.invoiceNumber}</span>
                 </div>
-                <div className="space-y-3 text-[12px]">
+                <div className="space-y-3 text-[13px]">
                   <p className="font-semibold">{supplier?.name}</p>
                   <p>Amount: {invoice.currency} {invoice.amount.toLocaleString("en-US")}</p>
                   <p>Due: {invoice.dueDate}</p>
@@ -139,8 +139,8 @@ export default async function InvoiceDetailPage({
                 <InfoRow label="File Size" value={invoice.fileSize} />
                 <InfoRow label="Validation Status" value={invoice.validationStatus} />
                 <div className="rounded-[12px] border border-[#243047] bg-[#172033] p-4">
-                  <p className="text-[12px] text-[#9CA3AF]">Review context</p>
-                  <p className="mt-2 text-[14px] leading-6 text-[#E5E7EB]">
+                  <p className="text-[13px] text-[#9CA3AF]">Review context</p>
+                  <p className="mt-2 text-[15px] leading-6 text-[#E5E7EB]">
                     Invoice preview is generated from parsed mock metadata. Use the
                     validation section below to compare against negotiated terms.
                   </p>
@@ -151,7 +151,7 @@ export default async function InvoiceDetailPage({
 
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Parsed Invoice Fields
               </CardTitle>
             </CardHeader>
@@ -174,7 +174,7 @@ export default async function InvoiceDetailPage({
 
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Validation Result
               </CardTitle>
             </CardHeader>
@@ -182,16 +182,16 @@ export default async function InvoiceDetailPage({
               <Table>
                 <TableHeader>
                   <TableRow className="border-[#243047] hover:bg-transparent">
-                    <TableHead className="px-4 text-[12px] text-[#9CA3AF]">
+                    <TableHead className="px-4 text-[13px] text-[#9CA3AF]">
                       Check
                     </TableHead>
-                    <TableHead className="text-[12px] text-[#9CA3AF]">
+                    <TableHead className="text-[13px] text-[#9CA3AF]">
                       Expected
                     </TableHead>
-                    <TableHead className="text-[12px] text-[#9CA3AF]">
+                    <TableHead className="text-[13px] text-[#9CA3AF]">
                       Invoice
                     </TableHead>
-                    <TableHead className="text-[12px] text-[#9CA3AF]">
+                    <TableHead className="text-[13px] text-[#9CA3AF]">
                       Result
                     </TableHead>
                   </TableRow>
@@ -230,7 +230,7 @@ export default async function InvoiceDetailPage({
                 </TableBody>
               </Table>
               <div className="border-t border-[#243047] p-4">
-                <p className="text-[12px] font-medium text-[#9CA3AF]">
+                <p className="text-[13px] font-medium text-[#9CA3AF]">
                   Mismatch List
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -250,19 +250,19 @@ export default async function InvoiceDetailPage({
         <aside className="space-y-6">
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Risk Analysis Panel
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
               <StatusBadge label={invoice.riskLevel} tone={riskTone[invoice.riskLevel]} />
-              <p className="text-[14px] leading-6 text-[#9CA3AF]">
+              <p className="text-[15px] leading-6 text-[#9CA3AF]">
                 {invoice.riskReason}
               </p>
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[12px] text-[#9CA3AF]">Confidence</span>
-                  <span className="text-[14px] font-semibold text-[#E5E7EB]">
+                  <span className="text-[13px] text-[#9CA3AF]">Confidence</span>
+                  <span className="text-[15px] font-semibold text-[#E5E7EB]">
                     {invoice.riskConfidence}%
                   </span>
                 </div>
@@ -293,22 +293,22 @@ export default async function InvoiceDetailPage({
 
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[16px] font-semibold text-[#E5E7EB]">
+              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
                 Internal Notes and History
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
               <textarea
                 defaultValue={invoice.notes}
-                className="min-h-[96px] w-full resize-none rounded-[10px] border border-[#243047] bg-[#172033] p-3 text-[14px] text-[#E5E7EB] outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                className="min-h-[96px] w-full resize-none rounded-[10px] border border-[#243047] bg-[#172033] p-3 text-[15px] text-[#E5E7EB] outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
               />
               <div className="space-y-3">
                 {invoice.history.map((event) => (
                   <div key={`${event.timestamp}-${event.title}`} className="border-l border-[#243047] pl-3">
-                    <p className="text-[14px] font-medium text-[#E5E7EB]">
+                    <p className="text-[15px] font-medium text-[#E5E7EB]">
                       {event.title}
                     </p>
-                    <p className="mt-1 text-[12px] leading-5 text-[#9CA3AF]">
+                    <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
                       {event.description}
                     </p>
                   </div>
@@ -323,7 +323,7 @@ export default async function InvoiceDetailPage({
         <div className="grid grid-cols-[1fr_auto] items-center gap-5">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[16px] font-semibold text-[#E5E7EB]">
+              <p className="text-[18px] font-semibold text-[#E5E7EB]">
                 Final Approval Decision
               </p>
               <StatusBadge
@@ -332,7 +332,7 @@ export default async function InvoiceDetailPage({
               />
               <StatusBadge label={invoice.riskLevel} tone={riskTone[invoice.riskLevel]} />
             </div>
-            <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[#9CA3AF]">
+            <p className="mt-2 max-w-3xl text-[15px] leading-6 text-[#9CA3AF]">
               Review is complete when parsed fields, validation checks, risk flags,
               and notes are acceptable. Total invoice amount is {invoice.currency}{" "}
               {invoice.amount.toLocaleString("en-US")}.
@@ -373,8 +373,8 @@ export default async function InvoiceDetailPage({
 function SummaryTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[10px] border border-[#243047] bg-[#111827] p-4">
-      <p className="text-[12px] text-[#9CA3AF]">{label}</p>
-      <p className="mt-2 truncate text-[14px] font-semibold text-[#E5E7EB]">
+      <p className="text-[13px] text-[#9CA3AF]">{label}</p>
+      <p className="mt-2 truncate text-[15px] font-semibold text-[#E5E7EB]">
         {value}
       </p>
     </div>
@@ -384,8 +384,8 @@ function SummaryTile({ label, value }: { label: string; value: string }) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[12px] text-[#9CA3AF]">{label}</p>
-      <p className="mt-1 text-[14px] leading-6 text-[#E5E7EB]">{value}</p>
+      <p className="text-[13px] text-[#9CA3AF]">{label}</p>
+      <p className="mt-1 text-[15px] leading-6 text-[#E5E7EB]">{value}</p>
     </div>
   )
 }
@@ -403,11 +403,11 @@ function ValidationRow({
 }) {
   return (
     <TableRow className="border-[#243047] hover:bg-[#172033]/70">
-      <TableCell className="px-4 text-[14px] font-medium text-[#E5E7EB]">
+      <TableCell className="px-4 text-[15px] font-medium text-[#E5E7EB]">
         {check}
       </TableCell>
-      <TableCell className="text-[14px] text-[#9CA3AF]">{expected}</TableCell>
-      <TableCell className="text-[14px] text-[#9CA3AF]">{actual}</TableCell>
+      <TableCell className="text-[15px] text-[#9CA3AF]">{expected}</TableCell>
+      <TableCell className="text-[15px] text-[#9CA3AF]">{actual}</TableCell>
       <TableCell>
         <StatusBadge
           label={matched ? "Match" : "Mismatch"}
@@ -421,7 +421,7 @@ function ValidationRow({
 function Flag({ label, active }: { label: string; active: boolean }) {
   return (
     <div className="flex items-center justify-between rounded-[10px] bg-[#172033] px-3 py-2">
-      <span className="text-[12px] text-[#9CA3AF]">{label}</span>
+      <span className="text-[13px] text-[#9CA3AF]">{label}</span>
       <StatusBadge label={active ? "Flagged" : "Clear"} tone={active ? "danger" : "success"} />
     </div>
   )
