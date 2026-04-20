@@ -22,7 +22,19 @@ Run:
 
 This command applies backend/supabase/schema.sql to your Supabase Postgres database.
 
-## 4) Notes
+## 4) Seed demo data from JSON
+
+Seed file:
+
+- backend/supabase/seed-data.json
+
+Run:
+
+- npm run db:seed
+
+The seed script upserts rows by `id` (or `key` for app_config).
+
+## 5) Notes
 
 - The script runs schema SQL in a transaction.
 - If it fails, changes are rolled back.

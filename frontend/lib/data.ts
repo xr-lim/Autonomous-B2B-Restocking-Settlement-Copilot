@@ -185,7 +185,7 @@ async function selectConfigValue<T>(key: string, fallback: T): Promise<T> {
     return fallback
   }
 
-  return (data?.value as T | undefined) ?? fallback
+  return normalizeRowKeys((data?.value as T | undefined) ?? fallback)
 }
 
 export async function getSuppliers(): Promise<Supplier[]> {
