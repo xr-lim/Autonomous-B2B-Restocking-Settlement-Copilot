@@ -1,7 +1,6 @@
 import { AlertTriangle, Boxes, PackageCheck } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
-import { FilterToolbar } from "@/components/shared/filter-toolbar"
 import { InventoryTableClient } from "@/components/shared/inventory-table-client"
 import { RestockAlertPanel } from "@/components/shared/restock-alert-panel"
 import { StatCard } from "@/components/shared/stat-card"
@@ -62,8 +61,6 @@ export default async function InventoryPage() {
         title="Pending Threshold Change Requests"
         description="Short preview · open the product detail to review the full AI reasoning and confirm the new threshold."
       />
-
-      <FilterToolbar searchPlaceholder="Search by SKU, product, supplier, or stock status..." />
 
       <InventoryTableClient
         initialProducts={products}

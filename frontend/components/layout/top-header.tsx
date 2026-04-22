@@ -1,23 +1,11 @@
-import { Bell, Search } from "lucide-react"
+import { Bell } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 
 export function TopHeader() {
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-[#243047] bg-[#0B1020]/95 px-6 backdrop-blur">
-      <div className="relative w-full max-w-[440px]">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6B7280]"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          placeholder="Search products, suppliers, workflows..."
-          className="h-10 w-full rounded-[10px] border border-[#243047] bg-[#121A2B] px-10 text-[14px] text-[#E5E7EB] outline-none transition-colors placeholder:text-[#6B7280] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-        />
-      </div>
-
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-end border-b border-[#243047] bg-[#0B1020]/95 px-6 backdrop-blur">
       <div className="flex items-center gap-3">
         <Button
           type="button"

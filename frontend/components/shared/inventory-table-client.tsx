@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { Plus, Sparkles } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 
+import { FilterToolbar } from "@/components/shared/filter-toolbar"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -32,6 +34,7 @@ import type {
   StockStatus,
   Supplier,
 } from "@/lib/types"
+import { createProductAction } from "@/lib/actions"
 
 type InventoryTableClientProps = {
   initialProducts: Product[]
@@ -66,43 +69,98 @@ function trendClassName(value: number) {
   return "text-[#10B981]"
 }
 
-function computeStockStatus(stock: number, threshold: number): StockStatus {
-  if (stock < threshold) {
-    return "below-threshold"
-  }
-  if (stock < threshold * 1.15) {
-    return "near-threshold"
-  }
-  return "healthy"
+type AddProductPayload = {
+  sku: string
+  name: string
+  category: string
+  supplierId: string
+  unitCost: number
+  initialStock: number
+  initialThreshold: number
+  maxCapacity: number
 }
 
 export function InventoryTableClient({
   initialProducts,
   suppliers,
 }: InventoryTableClientProps) {
-  const [products, setProducts] = useState<Product[]>(initialProducts)
+  const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [isPending, startTransition] = useTransition()
+  const [actionError, setActionError] = useState<string | null>(null)
+  const products = initialProducts
 
   const supplierLookup = useMemo(
     () => new Map(suppliers.map((item) => [item.id, item])),
     [suppliers]
   )
 
-  function handleAddProduct(product: Product) {
-    setProducts((current) => [product, ...current])
-    setDialogOpen(false)
+  const filteredProducts = useMemo(() => {
+    const keyword = query.trim().toLowerCase()
+    return products.filter((product) => {
+      const supplierName =
+        supplierLookup.get(product.supplierId)?.name.toLowerCase() ?? ""
+      const statusLabelValue = stockStatusLabel[product.status].toLowerCase()
+      const matchesSearch =
+        !keyword ||
+        [
+          product.sku,
+          product.name,
+          product.category,
+          supplierName,
+          statusLabelValue,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(keyword)
+      const matchesStatus =
+        statusFilter === "all" || product.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [products, query, statusFilter, supplierLookup])
+
+  function handleAddProduct(product: AddProductPayload) {
+    setActionError(null)
+    startTransition(async () => {
+      const result = await createProductAction(product)
+      if (!result.ok) {
+        setActionError(result.message ?? "Could not save product.")
+        return
+      }
+      setDialogOpen(false)
+      router.refresh()
+    })
   }
 
   return (
-    <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
+    <div className="space-y-4">
+      <FilterToolbar
+        searchPlaceholder="Search by SKU, product, supplier, category, or stock status..."
+        searchValue={query}
+        onSearchChange={setQuery}
+        filterLabel="Stock status"
+        filterValue={statusFilter}
+        onFilterChange={setStatusFilter}
+        filterOptions={[
+          { label: "All statuses", value: "all" },
+          { label: "Healthy", value: "healthy" },
+          { label: "Near threshold", value: "near-threshold" },
+          { label: "Below threshold", value: "below-threshold" },
+          { label: "Batch candidate", value: "batch-candidate" },
+        ]}
+      />
+
+      <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
       <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-[#243047] p-4">
         <div>
           <p className="text-[15px] font-semibold text-[#E5E7EB]">
             Stock list
           </p>
           <p className="mt-0.5 text-[12px] text-[#9CA3AF]">
-            {products.length} SKUs tracked · AI threshold continuously tuned on
-            30/90/365-day signals.
+            {filteredProducts.length} of {products.length} SKUs shown · AI
+            threshold continuously tuned on 30/90/365-day signals.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -118,6 +176,8 @@ export function InventoryTableClient({
           <AddProductDialog
             suppliers={suppliers}
             onSubmit={handleAddProduct}
+            pending={isPending}
+            actionError={actionError}
           />
         </Dialog>
       </CardHeader>
@@ -162,7 +222,7 @@ export function InventoryTableClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => {
+            {filteredProducts.map((product) => {
               const thresholdBuffer =
                 product.stockOnHand - product.aiThreshold
               const supplierCount = product.suppliers?.length ?? 1
@@ -263,19 +323,37 @@ export function InventoryTableClient({
                 </TableRow>
               )
             })}
+            {filteredProducts.length === 0 ? (
+              <TableRow className="border-[#243047] hover:bg-transparent">
+                <TableCell
+                  colSpan={11}
+                  className="px-4 py-8 text-center text-[14px] text-[#6B7280]"
+                >
+                  No products match the current search and filter.
+                </TableCell>
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   )
 }
 
 type AddProductDialogProps = {
   suppliers: Supplier[]
-  onSubmit: (product: Product) => void
+  onSubmit: (product: AddProductPayload) => void
+  pending?: boolean
+  actionError?: string | null
 }
 
-function AddProductDialog({ suppliers, onSubmit }: AddProductDialogProps) {
+function AddProductDialog({
+  suppliers,
+  onSubmit,
+  pending = false,
+  actionError,
+}: AddProductDialogProps) {
   const [sku, setSku] = useState("")
   const [name, setName] = useState("")
   const [category, setCategory] = useState("")
@@ -309,54 +387,17 @@ function AddProductDialog({ suppliers, onSubmit }: AddProductDialogProps) {
       return
     }
 
-    const status = computeStockStatus(stockNumber, thresholdNumber)
-    const supplier = suppliers.find((item) => item.id === supplierId)
-
+    setError(null)
     onSubmit({
-      id: `prod-new-${Date.now()}`,
       sku: sku.trim().toUpperCase(),
       name: name.trim(),
       category: category.trim(),
-      stockOnHand: stockNumber,
-      reorderPoint: thresholdNumber,
-      staticThreshold: thresholdNumber,
-      aiThreshold: thresholdNumber,
       unitCost: unitCostNumber,
-      maxStockAmount: capacityNumber,
-      forecastDemand: 0,
-      monthlyVelocity: 0,
-      trend30d: 0,
-      trend365d: 0,
       supplierId,
-      conversationId: "",
-      invoiceId: "",
-      status,
-      pendingAiAnalysis: true,
-      suppliers: supplier
-        ? [
-            {
-              supplierId: supplier.id,
-              lastDealPrice: unitCostNumber,
-              lastDealDate: new Date().toISOString(),
-              leadTimeDays: supplier.leadTimeDays,
-              moq: Math.max(50, Math.round(thresholdNumber * 0.5)),
-              reliabilityScore: supplier.reliabilityScore,
-              preferred: true,
-              note: "Seeded from Add-product form · awaiting Z.AI tuning",
-            },
-          ]
-        : undefined,
+      initialStock: stockNumber,
+      initialThreshold: thresholdNumber,
+      maxCapacity: capacityNumber,
     })
-
-    setSku("")
-    setName("")
-    setCategory("")
-    setSupplierId(suppliers[0]?.id ?? "")
-    setUnitCost("")
-    setInitialStock("")
-    setInitialThreshold("")
-    setMaxCapacity("")
-    setError(null)
   }
 
   return (
@@ -464,8 +505,8 @@ function AddProductDialog({ suppliers, onSubmit }: AddProductDialogProps) {
           </p>
         </div>
 
-        {error ? (
-          <p className="text-[12px] text-[#F87171]">{error}</p>
+        {error || actionError ? (
+          <p className="text-[12px] text-[#F87171]">{error ?? actionError}</p>
         ) : null}
 
         <DialogFooter>
@@ -480,9 +521,10 @@ function AddProductDialog({ suppliers, onSubmit }: AddProductDialogProps) {
           </DialogClose>
           <Button
             type="submit"
+            disabled={pending}
             className="h-9 rounded-[10px] bg-[#3B82F6] px-3 text-white hover:bg-[#2563EB]"
           >
-            Save product
+            {pending ? "Saving..." : "Save product"}
           </Button>
         </DialogFooter>
       </form>

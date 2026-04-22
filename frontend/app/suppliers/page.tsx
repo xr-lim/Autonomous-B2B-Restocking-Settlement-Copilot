@@ -16,7 +16,13 @@ export default async function SuppliersPage() {
         description="Maintain the supplier registry, assign SKUs, and keep lead time & reliability signals visible for every negotiation."
       />
 
-      <SuppliersManager initialSuppliers={suppliers} products={products} />
+      <SuppliersManager
+        key={`${suppliers.map((supplier) => supplier.id).join("-")}:${products
+          .map((product) => product.suppliers?.map((item) => item.supplierId).join("."))
+          .join("-")}`}
+        initialSuppliers={suppliers}
+        products={products}
+      />
     </>
   )
 }
