@@ -9,6 +9,7 @@ import type {
   StockStatus,
   Supplier,
   ThresholdChangeRequest,
+  WorkflowState,
 } from "@/lib/types"
 
 type DashboardKpi = {
@@ -962,7 +963,13 @@ function mapRestockRecommendations(
 
   return priorityProducts(products).map((product) => {
     const supplier = suppliers.find((item) => item.id === product.supplierId)
-    const workflow = rows.workflows.find((item) => item.productId === product.id)
+    const workflow = rows.workflows
+      .filter((item) => item.productId === product.id)
+      .sort(
+        (first, second) =>
+          new Date(second.updatedAt ?? second.createdAt ?? 0).getTime() -
+          new Date(first.updatedAt ?? first.createdAt ?? 0).getTime()
+      )[0]
     const quantity =
       workflow?.quantity ??
       Math.max(product.aiThreshold - product.stockOnHand, product.aiThreshold)
@@ -971,6 +978,8 @@ function mapRestockRecommendations(
     return {
       id: `restock-${product.id}`,
       sku: product.sku,
+      workflowId: workflow?.id,
+      workflowState: workflow?.currentState as WorkflowState | undefined,
       productName: product.name,
       supplier: supplier?.name ?? "Unknown supplier",
       reason:

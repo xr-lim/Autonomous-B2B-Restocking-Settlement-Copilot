@@ -10,14 +10,21 @@ import {
   X,
 } from "lucide-react"
 import { motion } from "motion/react"
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Fragment, useMemo, useState } from "react"
 
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import type { Product, RestockRecommendation, Supplier } from "@/lib/types"
+import { startRestockWorkflowAction } from "@/lib/actions"
+import type {
+  Product,
+  RestockRecommendation,
+  Supplier,
+  WorkflowState,
+} from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 const WORKFLOW_STEPS = [
@@ -29,8 +36,15 @@ const WORKFLOW_STEPS = [
   "Approval",
 ] as const
 
-const STOP_INDEX = 3
-const STEP_DELAY_MS = 1200
+const WORKFLOW_STATE_TO_STEP_INDEX: Partial<Record<WorkflowState, number>> = {
+  threshold_review: 0,
+  supplier_prep: 1,
+  po_sent: 2,
+  waiting_supplier: 3,
+  invoice_processing: 4,
+  ready_for_approval: 5,
+  completed: WORKFLOW_STEPS.length,
+}
 
 type RestockFormProps = {
   recommendation: RestockRecommendation
@@ -43,6 +57,7 @@ export function RestockForm({
   product,
   supplier,
 }: RestockFormProps) {
+  const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(() => ({
     targetPrice: recommendation.targetPrice,
@@ -51,16 +66,29 @@ export function RestockForm({
     reason: recommendation.reason,
   }))
   const [committed, setCommitted] = useState(draft)
-
-  const [workflowState, setWorkflowState] = useState<
-    "idle" | "starting" | "running"
-  >("idle")
-  const [activeStep, setActiveStep] = useState(0)
+  const [optimisticWorkflowState, setOptimisticWorkflowState] =
+    useState<WorkflowState>()
+  const [isStartingWorkflow, setIsStartingWorkflow] = useState(false)
+  const [actionError, setActionError] = useState<string>()
 
   const thresholdDeficit = product.stockOnHand - product.aiThreshold
   const leadTime = supplier?.leadTimeDays ?? 0
 
   const fields = isEditing ? draft : committed
+  const displayWorkflowState =
+    optimisticWorkflowState ?? recommendation.workflowState
+  const activeStep =
+    displayWorkflowState == null
+      ? undefined
+      : WORKFLOW_STATE_TO_STEP_INDEX[displayWorkflowState]
+  const workflowStarted =
+    displayWorkflowState != null &&
+    displayWorkflowState !== "threshold_review" &&
+    activeStep != null
+  const waitingStepIndex =
+    displayWorkflowState === "waiting_supplier"
+      ? WORKFLOW_STATE_TO_STEP_INDEX.waiting_supplier
+      : undefined
 
   const automationPlan = useMemo(() => recommendation.automationPlan, [
     recommendation.automationPlan,
@@ -81,42 +109,35 @@ export function RestockForm({
     setIsEditing(true)
   }
 
-  function handleStartRestock() {
-    if (workflowState !== "idle") return
-    setWorkflowState("starting")
-    setActiveStep(0)
-    const kickoff = window.setTimeout(() => {
-      setWorkflowState("running")
-    }, 600)
-    return () => window.clearTimeout(kickoff)
+  async function handleStartRestock() {
+    if (workflowStarted || isStartingWorkflow) return
+
+    setIsStartingWorkflow(true)
+    setActionError(undefined)
+    const result = await startRestockWorkflowAction({
+      productId: product.id,
+      sku: product.sku,
+    })
+
+    if (result.ok) {
+      setOptimisticWorkflowState("supplier_prep")
+      router.refresh()
+    } else {
+      setActionError(result.message ?? "Unable to start restock workflow.")
+    }
+
+    setIsStartingWorkflow(false)
   }
 
-  useEffect(() => {
-    if (workflowState !== "running") return
-    if (activeStep >= STOP_INDEX) return
-
-    const timer = window.setTimeout(() => {
-      setActiveStep((current) => Math.min(current + 1, STOP_INDEX))
-    }, STEP_DELAY_MS)
-
-    return () => window.clearTimeout(timer)
-  }, [workflowState, activeStep])
-
-  const workflowStarted = workflowState !== "idle"
-  const showCompactWorkflow = workflowState === "running"
-  const buttonLabel =
-    workflowState === "starting"
-      ? "Starting…"
-      : workflowState === "running"
-        ? "Processing…"
-        : "AI Restock"
+  const showCompactWorkflow = workflowStarted
+  const buttonLabel = isStartingWorkflow ? "Starting…" : "AI Restock"
 
   if (showCompactWorkflow) {
     return (
       <CompactWorkflowProgress
         steps={WORKFLOW_STEPS}
-        activeStep={activeStep}
-        stopIndex={STOP_INDEX}
+        activeStep={activeStep ?? 0}
+        waitingStepIndex={waitingStepIndex}
         productName={recommendation.productName}
         conversationId={recommendation.conversationId}
       />
@@ -325,10 +346,10 @@ export function RestockForm({
                 <Button
                   type="button"
                   onClick={handleStartRestock}
-                  disabled={workflowStarted}
+                  disabled={workflowStarted || isStartingWorkflow}
                   className="h-10 rounded-[10px] bg-[#3B82F6] px-4 text-white hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#3B82F6]/60"
                 >
-                  {workflowStarted ? (
+                  {isStartingWorkflow ? (
                     <Loader2
                       className="size-4 animate-spin"
                       aria-hidden="true"
@@ -342,6 +363,11 @@ export function RestockForm({
             )}
           </div>
         </div>
+        {actionError ? (
+          <p className="text-right text-[12px] leading-5 text-[#FCA5A5]">
+            {actionError}
+          </p>
+        ) : null}
 
       </CardContent>
     </Card>
@@ -351,7 +377,7 @@ export function RestockForm({
 type CompactWorkflowProgressProps = {
   steps: readonly string[]
   activeStep: number
-  stopIndex: number
+  waitingStepIndex?: number
   productName?: string
   conversationId?: string
 }
@@ -359,7 +385,7 @@ type CompactWorkflowProgressProps = {
 export function CompactWorkflowProgress({
   steps,
   activeStep,
-  stopIndex,
+  waitingStepIndex,
   productName,
   conversationId,
 }: CompactWorkflowProgressProps) {
@@ -399,8 +425,8 @@ export function CompactWorkflowProgress({
       <div className="mt-7 flex w-full items-start justify-between">
         {steps.map((label, index) => {
           const isCompleted = index < activeStep
-          const isActive = index === activeStep
-          const isWaitingStep = isActive && activeStep === stopIndex
+          const isActive = index === activeStep && activeStep < steps.length
+          const isWaitingStep = isActive && index === waitingStepIndex
           const connectorActive = index < activeStep
 
           return (

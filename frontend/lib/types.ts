@@ -81,6 +81,18 @@ export type Workflow = {
   updatedAt: string
 }
 
+export type WorkflowState =
+  | "stock_healthy"
+  | "threshold_review"
+  | "supplier_prep"
+  | "po_sent"
+  | "waiting_supplier"
+  | "invoice_processing"
+  | "ready_for_approval"
+  | "completed"
+  | "escalated"
+  | "blocked"
+
 export type Supplier = {
   id: string
   name: string
@@ -247,6 +259,8 @@ export type TimelineEvent = {
 export type RestockRecommendation = {
   id: string
   sku: string
+  workflowId?: string
+  workflowState?: WorkflowState
   productName: string
   supplier: string
   reason: string
