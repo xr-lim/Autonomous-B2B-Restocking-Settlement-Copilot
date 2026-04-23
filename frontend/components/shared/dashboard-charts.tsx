@@ -134,7 +134,7 @@ export function DashboardCharts({
       <section className="grid gap-6">
         <ChartCard
           title="Stock Trend Overview"
-          description="Current stock and AI threshold movement for priority SKUs."
+          description="Current stock and threshold movement for priority SKUs."
         >
           <ChartPlaceholder />
         </ChartCard>
@@ -190,7 +190,7 @@ export function DashboardCharts({
       <section className="grid gap-6">
         <ChartCard
           title="Stock Trend Overview"
-          description="Current stock and AI threshold movement for priority SKUs."
+          description="Current stock and threshold movement for priority SKUs."
         >
           <ChartPlaceholder />
         </ChartCard>
@@ -232,7 +232,7 @@ export function DashboardCharts({
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-[13px]">
                     <Metric label="Stock" value={item.stock.toString()} />
-                    <Metric label="AI threshold" value={item.threshold.toString()} />
+                    <Metric label="Threshold" value={item.threshold.toString()} />
                     <Metric
                       label="Buffer"
                       value={`${gap > 0 ? "+" : ""}${gap}`}
@@ -268,7 +268,7 @@ export function DashboardCharts({
             <Line
               type="monotone"
               dataKey="proteinThreshold"
-              name="Protein AI Threshold"
+              name="Protein Threshold"
               stroke="#3B82F6"
               strokeDasharray="5 5"
               strokeWidth={1.5}
@@ -286,7 +286,7 @@ export function DashboardCharts({
             <Line
               type="monotone"
               dataKey="coldBrewThreshold"
-              name="Cold Brew AI Threshold"
+              name="Cold Brew Threshold"
               stroke="#10B981"
               strokeDasharray="5 5"
               strokeWidth={1.5}
@@ -304,7 +304,7 @@ export function DashboardCharts({
             <Line
               type="monotone"
               dataKey="riceThreshold"
-              name="Rice AI Threshold"
+              name="Rice Threshold"
               stroke="#F59E0B"
               strokeDasharray="5 5"
               strokeWidth={1.5}

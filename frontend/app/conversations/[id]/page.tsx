@@ -114,10 +114,10 @@ function buildPriorityReasons(
   const reasons: string[] = []
 
   products.forEach((product) => {
-    const deficit = product.stockOnHand - product.aiThreshold
+    const deficit = product.stockOnHand - product.currentThreshold
     if (deficit < 0) {
       reasons.push(
-        `${product.name} stock ${Math.abs(deficit)} units below AI threshold (${product.stockOnHand}/${product.aiThreshold})`
+        `${product.name} stock ${Math.abs(deficit)} units below current threshold (${product.stockOnHand}/${product.currentThreshold})`
       )
     }
   })

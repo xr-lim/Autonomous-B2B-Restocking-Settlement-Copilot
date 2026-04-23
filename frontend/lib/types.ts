@@ -31,9 +31,7 @@ export type Product = {
   name: string
   category: string
   stockOnHand: number
-  reorderPoint: number
-  staticThreshold: number
-  aiThreshold: number
+  currentThreshold: number
   unitCost: number
   maxStockAmount: number
   forecastDemand: number
@@ -64,6 +62,20 @@ export type ThresholdChangeRequest = {
     | "lead-time-shift"
     | "bundle-opportunity"
     | "new-product"
+}
+
+export type RestockRequest = {
+  id: string
+  productSku: string
+  productName: string
+  workflowId?: string
+  requestedThreshold?: number
+  requestedQuantity?: number
+  reason: string
+  status: "pending" | "reviewed" | "accepted" | "rejected" | "cancelled"
+  requestedBy: "ai" | "merchant" | "system"
+  createdAt: string
+  updatedAt: string
 }
 
 export type Workflow = {
@@ -261,11 +273,13 @@ export type RestockRecommendation = {
   sku: string
   workflowId?: string
   workflowState?: WorkflowState
+  restockRequestId?: string
+  restockRequestStatus?: RestockRequest["status"]
   productName: string
   supplier: string
   reason: string
   currentStock: number
-  aiThreshold: number
+  currentThreshold: number
   targetPrice: string
   quantity: number
   estimatedSpend: string

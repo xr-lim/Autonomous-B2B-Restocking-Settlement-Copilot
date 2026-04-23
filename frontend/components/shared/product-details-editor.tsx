@@ -37,7 +37,7 @@ type ProductDetailsEditorProps = {
 type DraftState = {
   stockOnHand: number
   unitCost: number
-  aiThreshold: number
+  currentThreshold: number
   supplierId: string
   trackedSupplierIds: string[]
 }
@@ -65,7 +65,7 @@ export function ProductDetailsEditor({
   const [committed, setCommitted] = useState<DraftState>(() => ({
     stockOnHand: product.stockOnHand,
     unitCost: product.unitCost,
-    aiThreshold: product.aiThreshold,
+    currentThreshold: product.currentThreshold,
     supplierId: product.supplierId,
     trackedSupplierIds: buildInitialTracked(product),
   }))
@@ -113,8 +113,7 @@ export function ProductDetailsEditor({
         sku: product.sku,
         stockOnHand: draft.stockOnHand,
         unitCost: draft.unitCost,
-        staticThreshold: product.staticThreshold,
-        aiThreshold: draft.aiThreshold,
+        currentThreshold: draft.currentThreshold,
         supplierId: draft.supplierId,
         trackedSupplierIds: draft.trackedSupplierIds,
       })
@@ -184,7 +183,7 @@ export function ProductDetailsEditor({
               ) : null}
             </div>
             <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
-              Edit stock, unit price, AI threshold, and supplier links.
+              Edit stock, unit price, current threshold, and supplier links.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -276,16 +275,16 @@ export function ProductDetailsEditor({
             )}
           </FieldBlock>
 
-          <FieldBlock label="AI Threshold" editing={isEditing}>
+          <FieldBlock label="Current Threshold" editing={isEditing}>
             {isEditing ? (
               <Input
                 type="number"
                 min={0}
-                value={draft.aiThreshold}
+                value={draft.currentThreshold}
                 onChange={(event) =>
                   setDraft((current) => ({
                     ...current,
-                    aiThreshold: Number(event.target.value),
+                    currentThreshold: Number(event.target.value),
                   }))
                 }
                 className="h-10 rounded-[10px] border-[#243047] bg-[#0B1220] text-[15px] text-[#E5E7EB]"
@@ -293,10 +292,7 @@ export function ProductDetailsEditor({
             ) : (
               <div className="flex items-baseline gap-2">
                 <span className="text-[18px] font-semibold text-[#E5E7EB]">
-                  {state.aiThreshold.toLocaleString("en-US")}
-                </span>
-                <span className="text-[12px] text-[#6B7280]">
-                  · static {product.staticThreshold.toLocaleString("en-US")}
+                  {state.currentThreshold.toLocaleString("en-US")}
                 </span>
               </div>
             )}

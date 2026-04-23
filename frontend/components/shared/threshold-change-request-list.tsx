@@ -243,7 +243,7 @@ export function ThresholdChangeBanner({
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge label="AI Threshold Change Request" tone="ai" />
+                <StatusBadge label="Threshold Change Request" tone="ai" />
                 <StatusBadge
                   label={triggerLabel[request.trigger]}
                   tone={triggerTone[request.trigger]}
@@ -256,7 +256,7 @@ export function ThresholdChangeBanner({
                 ) : null}
               </div>
               <p className="mt-2 text-[15px] leading-6 text-[#E5E7EB]">
-                Z.AI suggests moving the AI threshold from{" "}
+                Z.AI suggests moving the current threshold from{" "}
                 <span className="font-semibold">
                   {request.currentThreshold}
                 </span>{" "}

@@ -9,12 +9,12 @@ import { ThresholdChangeReviewPanel } from "@/components/shared/threshold-change
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  getAiThresholdAnalysisBySku,
   getConversations,
   getProductStockDemandTrendBySku,
   getProducts,
   getRestockRecommendations,
   getSuppliers,
+  getThresholdAnalysisBySku,
   getThresholdChangeRequests,
 } from "@/lib/data"
 import type { StatusTone, StockStatus } from "@/lib/types"
@@ -48,7 +48,7 @@ export default async function InventoryDetailPage({
     products,
     suppliers,
     conversations,
-    aiThresholdAnalysisBySku,
+    thresholdAnalysisBySku,
     restockRecommendations,
     thresholdChangeRequests,
     productStockDemandTrendBySku,
@@ -56,7 +56,7 @@ export default async function InventoryDetailPage({
     getProducts(),
     getSuppliers(),
     getConversations(),
-    getAiThresholdAnalysisBySku(),
+    getThresholdAnalysisBySku(),
     getRestockRecommendations(),
     getThresholdChangeRequests(),
     getProductStockDemandTrendBySku(),
@@ -73,15 +73,13 @@ export default async function InventoryDetailPage({
     (item) => item.id === product.conversationId
   )
   const analysis =
-    aiThresholdAnalysisBySku[
-      product.sku as keyof typeof aiThresholdAnalysisBySku
+    thresholdAnalysisBySku[
+      product.sku as keyof typeof thresholdAnalysisBySku
     ] ?? {
-      currentThreshold: product.aiThreshold,
-      recommendedThreshold: product.aiThreshold,
-      safetyBuffer: "N/A",
-      reorderUrgency: "N/A",
+      currentThreshold: product.currentThreshold,
+      recommendedThreshold: product.currentThreshold,
       confidenceScore: 0,
-      explanation: "No AI threshold analysis found for this SKU in Supabase.",
+      explanation: "No threshold analysis found for this SKU in Supabase.",
     }
   const restockRecommendation = restockRecommendations.find(
     (item) => item.sku === product.sku
@@ -133,10 +131,10 @@ export default async function InventoryDetailPage({
         <Card className="rounded-[14px] border border-[#8B5CF6]/30 bg-[#111827] py-0 shadow-none ring-0">
           <CardHeader className="border-b border-[#8B5CF6]/25 p-5">
             <CardTitle className="text-[17px] font-semibold text-[#E5E7EB]">
-              AI Threshold Analysis
+              Threshold Analysis
             </CardTitle>
             <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
-              Z.AI&apos;s recommendation for the reorder threshold.
+              Z.AI&apos;s recommendation for the current reorder threshold.
             </p>
           </CardHeader>
           <CardContent className="space-y-4 p-5">
@@ -149,8 +147,6 @@ export default async function InventoryDetailPage({
                 label="Recommended"
                 value={analysis.recommendedThreshold}
               />
-              <Metric label="Safety Buffer" value={analysis.safetyBuffer} />
-              <Metric label="Reorder Urgency" value={analysis.reorderUrgency} />
             </div>
             <div className="rounded-[12px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 p-4">
               <p className="text-[12px] font-medium text-[#C4B5FD]">

@@ -159,8 +159,8 @@ export function InventoryTableClient({
             Stock list
           </p>
           <p className="mt-0.5 text-[12px] text-[#9CA3AF]">
-            {filteredProducts.length} of {products.length} SKUs shown · AI
-            threshold continuously tuned on 30/90/365-day signals.
+            {filteredProducts.length} of {products.length} SKUs shown · current
+            threshold tuned on 30/90/365-day signals.
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -199,16 +199,10 @@ export function InventoryTableClient({
                 Current Stock
               </TableHead>
               <TableHead className="text-[12px] text-[#9CA3AF]">
-                Static Threshold
-              </TableHead>
-              <TableHead className="text-[12px] text-[#9CA3AF]">
-                AI Threshold
+                Current Threshold
               </TableHead>
               <TableHead className="text-[12px] text-[#9CA3AF]">
                 Max Capacity
-              </TableHead>
-              <TableHead className="text-[12px] text-[#9CA3AF]">
-                Threshold Buffer
               </TableHead>
               <TableHead className="text-[12px] text-[#9CA3AF]">
                 30D Trend
@@ -223,8 +217,6 @@ export function InventoryTableClient({
           </TableHeader>
           <TableBody>
             {filteredProducts.map((product) => {
-              const thresholdBuffer =
-                product.stockOnHand - product.aiThreshold
               const supplierCount = product.suppliers?.length ?? 1
               const supplierName =
                 supplierLookup.get(product.supplierId)?.name ??
@@ -270,9 +262,6 @@ export function InventoryTableClient({
                   <TableCell className="text-[14px] text-[#E5E7EB]">
                     {product.stockOnHand}
                   </TableCell>
-                  <TableCell className="text-[14px] text-[#9CA3AF]">
-                    {product.staticThreshold}
-                  </TableCell>
                   <TableCell className="text-[14px] text-[#E5E7EB]">
                     {product.pendingAiAnalysis ? (
                       <span className="inline-flex items-center gap-1 text-[#C4B5FD]">
@@ -280,21 +269,11 @@ export function InventoryTableClient({
                         tuning…
                       </span>
                     ) : (
-                      product.aiThreshold
+                      product.currentThreshold
                     )}
                   </TableCell>
                   <TableCell className="text-[14px] text-[#9CA3AF]">
                     {product.maxStockAmount.toLocaleString("en-US")}
-                  </TableCell>
-                  <TableCell
-                    className={
-                      thresholdBuffer < 0
-                        ? "text-[14px] font-medium text-[#EF4444]"
-                        : "text-[14px] font-medium text-[#10B981]"
-                    }
-                  >
-                    {thresholdBuffer > 0 ? "+" : ""}
-                    {thresholdBuffer}
                   </TableCell>
                   <TableCell
                     className={`text-[14px] ${trendClassName(
@@ -326,7 +305,7 @@ export function InventoryTableClient({
             {filteredProducts.length === 0 ? (
               <TableRow className="border-[#243047] hover:bg-transparent">
                 <TableCell
-                  colSpan={11}
+                  colSpan={9}
                   className="px-4 py-8 text-center text-[14px] text-[#6B7280]"
                 >
                   No products match the current search and filter.
@@ -462,7 +441,7 @@ function AddProductDialog({
               className="h-9 rounded-[10px] border-[#243047] bg-[#0B1220] text-[14px] text-[#E5E7EB]"
             />
           </Field>
-          <Field label="Initial threshold">
+          <Field label="Current threshold">
             <Input
               type="number"
               min={0}

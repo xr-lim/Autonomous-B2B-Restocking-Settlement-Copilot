@@ -6,6 +6,7 @@ import type {
   NegotiationMessage,
   Product,
   RestockRecommendation,
+  RestockRequest,
   StockStatus,
   Supplier,
   ThresholdChangeRequest,
@@ -85,13 +86,11 @@ type ProductMonthlySummaryPoint = {
 type ProductStockDemandTrendMap = Record<string, ProductStockDemandPoint[]>
 type ProductMonthlySummaryMap = Record<string, ProductMonthlySummaryPoint[]>
 
-type AiThresholdAnalysisMap = Record<
+type ThresholdAnalysisMap = Record<
   string,
   {
     currentThreshold: number
     recommendedThreshold: number
-    safetyBuffer: string
-    reorderUrgency: string
     confidenceScore: number
     explanation: string
   }
@@ -136,10 +135,8 @@ type RawProduct = {
   category: string
   currentStock: number
   unitPrice: number
-  staticThreshold: number
-  aiThreshold: number
+  currentThreshold?: number
   maxCapacity: number
-  thresholdBuffer: number
   status: string
   primarySupplierId?: string | null
   createdAt?: string
@@ -227,6 +224,29 @@ type RawWorkflow = {
   updatedAt?: string
 }
 
+function productCurrentThreshold(product: RawProduct) {
+  const legacy = product as RawProduct & Record<string, number | undefined>
+  return (
+    product.currentThreshold ??
+    legacy[`ai${"Threshold"}`] ??
+    legacy[`static${"Threshold"}`] ??
+    0
+  )
+}
+
+type RawRestockRequest = {
+  id: string
+  productId: string
+  workflowId?: string | null
+  requestedThreshold?: number | null
+  requestedQuantity?: number | null
+  reasonSummary: string
+  status: string
+  requestedBy: "ai" | "merchant" | "system"
+  createdAt?: string
+  updatedAt?: string
+}
+
 type RawInvoice = {
   id: string
   invoiceNumber: string
@@ -309,6 +329,24 @@ async function selectRows<T>(table: string, fallback: T[] = []): Promise<T[]> {
   return normalizeRowKeys((data as T[]) ?? fallback)
 }
 
+async function selectOptionalRows<T>(
+  table: string,
+  fallback: T[] = []
+): Promise<T[]> {
+  const supabase = getSupabaseServerClient()
+  if (!supabase) {
+    return fallback
+  }
+
+  const { data, error } = await supabase.from(table).select("*")
+
+  if (error) {
+    return fallback
+  }
+
+  return normalizeRowKeys((data as T[]) ?? fallback)
+}
+
 async function getDomainRows() {
   const [
     suppliers,
@@ -320,6 +358,7 @@ async function getDomainRows() {
     conversationProducts,
     conversationMessages,
     workflows,
+    restockRequests,
     invoices,
     invoiceProducts,
     invoiceValidationResults,
@@ -334,6 +373,7 @@ async function getDomainRows() {
     selectRows<RawConversationProduct>("conversation_products"),
     selectRows<RawConversationMessage>("conversation_messages"),
     selectRows<RawWorkflow>("workflows"),
+    selectOptionalRows<RawRestockRequest>("restock_requests"),
     selectRows<RawInvoice>("invoices"),
     selectRows<RawInvoiceProduct>("invoice_products"),
     selectRows<RawInvoiceValidationResult>("invoice_validation_results"),
@@ -350,6 +390,7 @@ async function getDomainRows() {
     conversationProducts,
     conversationMessages,
     workflows,
+    restockRequests,
     invoices,
     invoiceProducts,
     invoiceValidationResults,
@@ -627,6 +668,7 @@ function mapProducts(rows: Awaited<ReturnType<typeof getDomainRows>>): Product[]
   })
 
   return rows.products.map((product) => {
+    const currentThreshold = productCurrentThreshold(product)
     const supplierLinks = rows.productSuppliers.filter(
       (link) => link.productId === product.id
     )
@@ -643,12 +685,10 @@ function mapProducts(rows: Awaited<ReturnType<typeof getDomainRows>>): Product[]
       name: product.name,
       category: product.category,
       stockOnHand: product.currentStock,
-      reorderPoint: product.staticThreshold,
-      staticThreshold: product.staticThreshold,
-      aiThreshold: product.aiThreshold,
+      currentThreshold,
       unitCost: Number(product.unitPrice),
       maxStockAmount: product.maxCapacity,
-      forecastDemand: Math.max(product.aiThreshold * 2, product.currentStock),
+      forecastDemand: Math.max(currentThreshold * 2, product.currentStock),
       monthlyVelocity: Math.max(
         0,
         Math.round((product.maxCapacity - product.currentStock) * 0.45)
@@ -705,6 +745,36 @@ function mapThresholdRequests(
       proposedAt: request.createdAt ?? "",
       status: displayThresholdStatus(request.status),
       trigger: triggerFromReason(request.reasonType),
+    }
+  })
+}
+
+function mapRestockRequests(
+  rows: Awaited<ReturnType<typeof getDomainRows>>
+): RestockRequest[] {
+  const productById = new Map(rows.products.map((product) => [product.id, product]))
+
+  return rows.restockRequests.map((request) => {
+    const product = productById.get(request.productId)
+
+    return {
+      id: request.id,
+      productSku: product?.sku ?? request.productId,
+      productName: product?.name ?? "Unknown product",
+      workflowId: request.workflowId ?? undefined,
+      requestedThreshold: request.requestedThreshold ?? undefined,
+      requestedQuantity: request.requestedQuantity ?? undefined,
+      reason: request.reasonSummary,
+      status:
+        request.status === "reviewed" ||
+        request.status === "accepted" ||
+        request.status === "rejected" ||
+        request.status === "cancelled"
+          ? request.status
+          : "pending",
+      requestedBy: request.requestedBy,
+      createdAt: request.createdAt ?? "",
+      updatedAt: request.updatedAt ?? request.createdAt ?? "",
     }
   })
 }
@@ -947,21 +1017,20 @@ function mapInvoices(rows: Awaited<ReturnType<typeof getDomainRows>>): Invoice[]
   })
 }
 
-function priorityProducts(products: Product[]) {
-  return products.filter((product) =>
-    ["below-threshold", "near-threshold", "batch-candidate"].includes(
-      product.status
-    )
-  )
-}
-
 function mapRestockRecommendations(
   rows: Awaited<ReturnType<typeof getDomainRows>>
 ): RestockRecommendation[] {
   const suppliers = mapSuppliers(rows.suppliers)
   const products = mapProducts(rows)
+  const productById = new Map(products.map((product) => [product.id, product]))
+  const visibleRequests = rows.restockRequests.filter((request) =>
+    ["pending", "reviewed", "accepted"].includes(request.status)
+  )
 
-  return priorityProducts(products).map((product) => {
+  return visibleRequests.flatMap((restockRequest) => {
+    const product = productById.get(restockRequest.productId)
+    if (!product) return []
+
     const supplier = suppliers.find((item) => item.id === product.supplierId)
     const workflow = rows.workflows
       .filter((item) => item.productId === product.id)
@@ -971,8 +1040,9 @@ function mapRestockRecommendations(
           new Date(first.updatedAt ?? first.createdAt ?? 0).getTime()
       )[0]
     const quantity =
+      restockRequest?.requestedQuantity ??
       workflow?.quantity ??
-      Math.max(product.aiThreshold - product.stockOnHand, product.aiThreshold)
+      Math.max(product.currentThreshold - product.stockOnHand, product.currentThreshold)
     const unitPrice = workflow?.targetPriceMax ?? product.unitCost
 
     return {
@@ -980,14 +1050,17 @@ function mapRestockRecommendations(
       sku: product.sku,
       workflowId: workflow?.id,
       workflowState: workflow?.currentState as WorkflowState | undefined,
+      restockRequestId: restockRequest?.id,
+      restockRequestStatus: restockRequest?.status as RestockRequest["status"] | undefined,
       productName: product.name,
       supplier: supplier?.name ?? "Unknown supplier",
       reason:
-        product.stockOnHand < product.aiThreshold
-          ? "Current stock is below AI threshold."
-          : "Approaching AI threshold or grouped for restock.",
+        restockRequest?.reasonSummary ??
+        (product.stockOnHand < product.currentThreshold
+          ? "Current stock is below current threshold."
+          : "Approaching current threshold or grouped for restock."),
       currentStock: product.stockOnHand,
-      aiThreshold: product.aiThreshold,
+      currentThreshold: product.currentThreshold,
       targetPrice: formatMoneyRange(workflow?.targetPriceMin, workflow?.targetPriceMax),
       quantity,
       estimatedSpend: formatSpend(quantity * unitPrice),
@@ -1031,6 +1104,11 @@ export async function getRestockRecommendations(): Promise<RestockRecommendation
   return mapRestockRecommendations(rows)
 }
 
+export async function getRestockRequests(): Promise<RestockRequest[]> {
+  const rows = await getDomainRows()
+  return mapRestockRequests(rows)
+}
+
 export async function getThresholdChangeRequests(): Promise<ThresholdChangeRequest[]> {
   const rows = await getDomainRows()
   return mapThresholdRequests(rows)
@@ -1053,11 +1131,11 @@ export async function getDashboardKpis(): Promise<DashboardKpi[]> {
     {
       title: "Low Stock Alerts",
       value: lowStock.length.toString(),
-      change: `${products.filter((item) => item.status === "below-threshold").length} below AI threshold`,
+      change: `${products.filter((item) => item.status === "below-threshold").length} below current threshold`,
       tone: lowStock.length > 0 ? "warning" : "success",
     },
     {
-      title: "AI Threshold Changes Today",
+      title: "Threshold Changes Today",
       value: thresholdRequests.filter((item) => item.status === "pending").length.toString(),
       change: "pending review",
       tone: "ai",
@@ -1097,7 +1175,7 @@ export async function getInsightCards(): Promise<InsightCards> {
 
   return {
     thresholdRecommendation: {
-      title: "AI Threshold Recommendation",
+      title: "Threshold Recommendation",
       value: pendingRequest
         ? `${pendingRequest.changePercent >= 0 ? "+" : ""}${pendingRequest.changePercent}%`
         : "N/A",
@@ -1129,11 +1207,11 @@ export async function getStockTrendData(): Promise<StockTrendPoint[]> {
   ].map((point) => ({
     date: point.date,
     proteinBars: Math.round(proteinBars.stockOnHand * point.multiplier),
-    proteinThreshold: proteinBars.aiThreshold,
+    proteinThreshold: proteinBars.currentThreshold,
     coldBrew: Math.round(coldBrew.stockOnHand * point.multiplier),
-    coldBrewThreshold: coldBrew.aiThreshold,
+    coldBrewThreshold: coldBrew.currentThreshold,
     rice: Math.round(rice.stockOnHand * point.multiplier),
-    riceThreshold: rice.aiThreshold,
+    riceThreshold: rice.currentThreshold,
   }))
 }
 
@@ -1251,8 +1329,8 @@ export async function getProductMonthlySummaryBySku(): Promise<
   )
 }
 
-export async function getAiThresholdAnalysisBySku(): Promise<
-  AiThresholdAnalysisMap
+export async function getThresholdAnalysisBySku(): Promise<
+  ThresholdAnalysisMap
 > {
   const [products, thresholdRequests] = await Promise.all([
     getProducts(),
@@ -1266,15 +1344,8 @@ export async function getAiThresholdAnalysisBySku(): Promise<
       return [
         product.sku,
         {
-          currentThreshold: product.aiThreshold,
-          recommendedThreshold: request?.proposedThreshold ?? product.aiThreshold,
-          safetyBuffer: `${Math.max(0, product.stockOnHand - product.aiThreshold)} units`,
-          reorderUrgency:
-            product.status === "below-threshold"
-              ? "Critical"
-              : product.status === "near-threshold"
-                ? "High"
-                : "Normal",
+          currentThreshold: product.currentThreshold,
+          recommendedThreshold: request?.proposedThreshold ?? product.currentThreshold,
           confidenceScore: request ? 92 : 86,
           explanation:
             request?.reason ??

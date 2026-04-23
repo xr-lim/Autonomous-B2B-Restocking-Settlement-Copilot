@@ -25,8 +25,7 @@ type ProductUpdatePayload = {
   sku: string
   stockOnHand: number
   unitCost: number
-  staticThreshold: number
-  aiThreshold: number
+  currentThreshold: number
   supplierId: string
   trackedSupplierIds: string[]
 }
@@ -139,10 +138,8 @@ export async function createProductAction(
         category: cleanText(payload.category),
         current_stock: payload.initialStock,
         unit_price: payload.unitCost,
-        static_threshold: payload.initialThreshold,
-        ai_threshold: payload.initialThreshold,
+        current_threshold: payload.initialThreshold,
         max_capacity: payload.maxCapacity,
-        threshold_buffer: 0,
         status: "batch_candidate",
         primary_supplier_id: payload.supplierId,
       })
@@ -186,12 +183,8 @@ export async function updateProductAction(
         .update({
           current_stock: payload.stockOnHand,
           unit_price: payload.unitCost,
-          ai_threshold: payload.aiThreshold,
-          threshold_buffer: Math.max(
-            0,
-            payload.aiThreshold - payload.staticThreshold
-          ),
-          status: stockStatus(payload.stockOnHand, payload.aiThreshold),
+          current_threshold: payload.currentThreshold,
+          status: stockStatus(payload.stockOnHand, payload.currentThreshold),
           primary_supplier_id: payload.supplierId,
         })
         .eq("id", payload.productId)
@@ -390,7 +383,7 @@ export async function decideThresholdRequestAction(
     const product = await throwIfSupabaseError(
       await supabase
         .from("products")
-        .select("id,sku,current_stock,static_threshold")
+        .select("id,sku,current_stock")
         .eq("id", request.product_id)
         .single()
     )
@@ -403,11 +396,7 @@ export async function decideThresholdRequestAction(
         await supabase
           .from("products")
           .update({
-            ai_threshold: payload.proposedThreshold,
-            threshold_buffer: Math.max(
-              0,
-              payload.proposedThreshold - product.static_threshold
-            ),
+            current_threshold: payload.proposedThreshold,
             status: stockStatus(product.current_stock, payload.proposedThreshold),
           })
           .eq("id", product.id)
@@ -486,22 +475,40 @@ export async function startRestockWorkflowAction(
     const existingWorkflows = await throwIfSupabaseError(
       await supabase
         .from("workflows")
-        .select("id")
+        .select("id,quantity")
         .eq("product_id", payload.productId)
         .order("updated_at", { ascending: false })
         .limit(1)
     )
     const existingWorkflow = (existingWorkflows ?? [])[0]
+    const product = await throwIfSupabaseError(
+      await supabase
+        .from("products")
+        .select("id,current_stock,current_threshold")
+        .eq("id", payload.productId)
+        .single()
+    )
+
+    if (!product) {
+      throw new Error("Product no longer exists.")
+    }
 
     let workflowId = existingWorkflow?.id as string | undefined
+    const requestedQuantity =
+      (existingWorkflow?.quantity as number | null | undefined) ??
+      Math.max(
+        Number(product.current_threshold) - Number(product.current_stock),
+        Number(product.current_threshold)
+      )
 
     if (workflowId) {
       await throwIfSupabaseError(
         await supabase
           .from("workflows")
           .update({
-            current_state: "supplier_prep",
+            current_state: "po_sent",
             approval_state: "waiting_approval",
+            quantity: requestedQuantity,
           })
           .eq("id", workflowId)
       )
@@ -512,8 +519,9 @@ export async function startRestockWorkflowAction(
           .insert({
             id: id("wf"),
             product_id: payload.productId,
-            current_state: "supplier_prep",
+            current_state: "po_sent",
             approval_state: "waiting_approval",
+            quantity: requestedQuantity,
           })
           .select("id")
           .single()
@@ -525,12 +533,61 @@ export async function startRestockWorkflowAction(
       throw new Error("Unable to start restock workflow.")
     }
 
+    const activeRestockRequests = await throwIfSupabaseError(
+      await supabase
+        .from("restock_requests")
+        .select("id")
+        .eq("product_id", payload.productId)
+        .in("status", ["pending", "reviewed"])
+        .order("updated_at", { ascending: false })
+        .limit(1)
+    )
+    const activeRestockRequest = (activeRestockRequests ?? [])[0]
+
+    if (activeRestockRequest?.id) {
+      await throwIfSupabaseError(
+        await supabase
+          .from("restock_requests")
+          .update({
+            workflow_id: workflowId,
+            requested_threshold: product.current_threshold,
+            requested_quantity: requestedQuantity,
+            status: "accepted",
+          })
+          .eq("id", activeRestockRequest.id)
+      )
+    } else {
+      await throwIfSupabaseError(
+        await supabase.from("restock_requests").insert({
+          id: id("rr"),
+          product_id: payload.productId,
+          workflow_id: workflowId,
+          requested_threshold: product.current_threshold,
+          requested_quantity: requestedQuantity,
+          reason_summary:
+            "AI Restock accepted from product detail page after stock review.",
+          status: "accepted",
+          requested_by: "merchant",
+        })
+      )
+    }
+
     await throwIfSupabaseError(
       await supabase.from("workflow_events").insert({
         id: id("we"),
         workflow_id: workflowId,
         state: "supplier_prep",
-        note: "AI Restock initiated from product detail page after threshold review accepted",
+        note: "Supplier preparation completed automatically after merchant accepted AI Restock",
+        actor_type: "system",
+      })
+    )
+
+    await throwIfSupabaseError(
+      await supabase.from("workflow_events").insert({
+        id: id("we"),
+        workflow_id: workflowId,
+        state: "po_sent",
+        note: "AI Restock initiated from product detail page and purchase order sent",
         actor_type: "merchant",
       })
     )

@@ -35,7 +35,7 @@ export default async function InventoryPage() {
       <PageHeader
         eyebrow="Inventory"
         title="Inventory"
-        description="Track current stock, AI threshold changes, and supplier-linked restocking opportunities."
+        description="Track current stock, threshold changes, and supplier-linked restocking opportunities."
       />
 
       <section className="grid grid-cols-3 gap-4">

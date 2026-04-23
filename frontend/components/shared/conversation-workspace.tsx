@@ -263,7 +263,7 @@ export function ConversationWorkspace({
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[13px] text-[#9CA3AF]">
                     <span>Stock: {product.stockOnHand}</span>
-                    <span>AI threshold: {product.aiThreshold}</span>
+                    <span>Threshold: {product.currentThreshold}</span>
                   </div>
                 </div>
               ))}
