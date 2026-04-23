@@ -42,6 +42,9 @@ create table public.suppliers (
   reliability_score numeric(5, 2) not null check (
     reliability_score >= 0 and reliability_score <= 100
   ),
+  status text not null check (
+    status in ('preferred', 'watchlist', 'inactive')
+  ),
   moq integer check (moq is null or moq >= 0),
   notes text,
   created_at timestamptz not null default now(),
@@ -201,6 +204,8 @@ create table public.restock_requests (
   id text primary key,
   product_id text not null references public.products(id) on delete cascade,
   workflow_id text references public.workflows(id) on delete set null,
+  target_price_min numeric(12, 2),
+  target_price_max numeric(12, 2),
   requested_threshold integer check (
     requested_threshold is null or requested_threshold >= 0
   ),
