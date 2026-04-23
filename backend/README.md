@@ -22,3 +22,45 @@ Schema location:
 
 - FastAPI
 - Supabase/Postgres
+
+## Run The Backend
+
+From the repo root:
+
+```powershell
+npm run backend:dev
+```
+
+Or from the `backend` folder:
+
+```powershell
+npm run dev
+```
+
+The PowerShell launcher in `backend/run.ps1` will automatically look for the
+project virtualenv at `..\.venv`, `.\.venv`, or `.\venv` and start:
+
+```powershell
+python -m uvicorn app.main:socket_app --host 127.0.0.1 --port 8000 --reload
+```
+
+## AI Model Integration
+
+The backend now exposes an AI copilot endpoint that can ground its answer in the
+existing product, supplier conversation, and invoice data.
+
+Add these variables to `backend/.env`:
+
+```env
+ANTHROPIC_BASE_URL=https://api.ilmu.ai/anthropic
+ANTHROPIC_AUTH_TOKEN=
+ANTHROPIC_MODEL=ilmu-glm-5.1
+AI_MAX_TOKENS=1200
+AI_TEMPERATURE=0.2
+AI_TIMEOUT_SECONDS=60
+```
+
+Useful endpoints:
+
+- `GET /api/v1/ai/status`
+- `POST /api/v1/ai/copilot`

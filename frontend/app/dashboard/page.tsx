@@ -3,13 +3,13 @@ import {
   AlertTriangle,
   Bot,
   MessageSquareText,
-  PackagePlus,
   ReceiptText,
   SlidersHorizontal,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
 import { CollapsibleSection } from "@/components/shared/collapsible-section"
+import { DashboardThresholdAnalysisButton } from "@/components/shared/dashboard-threshold-analysis-button"
 import { DashboardRestockRowActions } from "@/components/shared/dashboard-restock-row-actions"
 import { DashboardCharts } from "@/components/shared/dashboard-charts"
 import { StatCard } from "@/components/shared/stat-card"
@@ -312,26 +312,7 @@ export default async function DashboardPage() {
 
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardContent className="flex flex-col gap-3 p-4">
-              <Button
-                asChild
-                variant="outline"
-                className="h-14 w-full justify-center rounded-[10px] border-[#1D4ED8] bg-[#2563EB] px-4 text-[16px] font-semibold text-white hover:bg-[#1D4ED8]"
-              >
-                <Link href="/inventory">
-                  <SlidersHorizontal className="size-4" aria-hidden="true" />
-                  Analyze Threshold
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="h-14 w-full justify-center rounded-[10px] border-[#7C3AED] bg-[#8B5CF6] px-4 text-[16px] font-semibold text-white hover:bg-[#7C3AED]"
-              >
-                <Link href="#restock-queue">
-                  <PackagePlus className="size-4" aria-hidden="true" />
-                  Restock Suggestion
-                </Link>
-              </Button>
+              <DashboardThresholdAnalysisButton />
             </CardContent>
           </Card>
         </div>

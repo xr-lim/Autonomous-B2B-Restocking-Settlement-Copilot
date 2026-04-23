@@ -9,6 +9,29 @@ type ActionResult = {
   message?: string
 }
 
+type ThresholdAnalysisActionResult = ActionResult & {
+  analyzedCount?: number
+  createdCount?: number
+  results?: Array<{
+    sku: string
+    status: string
+    detail?: string
+    currentThreshold?: number | null
+    proposedThreshold?: number | null
+    confidence?: number | null
+    trace?: Array<{
+      kind: string
+      message: string
+      toolName?: string
+      toolInput?: unknown
+      toolSummary?: string
+      decision?: unknown
+      proposedThreshold?: number
+      requestId?: string
+    }>
+  }>
+}
+
 type ProductPayload = {
   sku: string
   name: string
@@ -101,6 +124,14 @@ function requireSupabase() {
   return supabase
 }
 
+function backendApiBaseUrl() {
+  return (
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ??
+    process.env.BACKEND_API_URL ??
+    "http://127.0.0.1:8000"
+  ).replace(/\/$/, "")
+}
+
 function id(prefix: string) {
   return `${prefix}-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`
 }
@@ -172,6 +203,89 @@ function revalidateProductPaths(sku?: string) {
   revalidatePath("/inventory")
   revalidatePath("/suppliers")
   if (sku) revalidatePath(`/inventory/${sku}`)
+}
+
+export async function analyzeThresholdsAction(
+  skus?: string[]
+): Promise<ThresholdAnalysisActionResult> {
+  try {
+    const response = await fetch(
+      `${backendApiBaseUrl()}/api/v1/ai/threshold-analysis/run`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          skus: skus && skus.length > 0 ? skus : undefined,
+        }),
+      }
+    )
+
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      const detail =
+        payload && typeof payload === "object" && "detail" in payload
+          ? String(payload.detail)
+          : "Threshold analysis request failed."
+      throw new Error(detail)
+    }
+
+    revalidatePath("/")
+    revalidatePath("/dashboard")
+    revalidatePath("/inventory")
+    for (const result of payload?.results ?? []) {
+      if (result?.sku) {
+        revalidatePath(`/inventory/${result.sku}`)
+      }
+    }
+
+    return {
+      ok: true,
+      message:
+        payload?.created_count > 0
+          ? `Created ${payload.created_count} threshold request${payload.created_count === 1 ? "" : "s"}.`
+          : "Threshold analysis finished with no new requests.",
+      analyzedCount: payload?.analyzed_count,
+      createdCount: payload?.created_count,
+      results: (payload?.results ?? []).map((item: { sku: string; status: string; detail?: string }) => ({
+        sku: item.sku,
+        status: item.status,
+        detail: item.detail,
+        currentThreshold:
+          typeof item.current_threshold === "number" ? item.current_threshold : null,
+        proposedThreshold:
+          typeof item.proposed_threshold === "number" ? item.proposed_threshold : null,
+        confidence: typeof item.confidence === "number" ? item.confidence : null,
+        trace: Array.isArray(item.trace)
+          ? item.trace.map((event) => ({
+              kind: typeof event?.kind === "string" ? event.kind : "event",
+              message: typeof event?.message === "string" ? event.message : "",
+              toolName:
+                typeof event?.tool_name === "string" ? event.tool_name : undefined,
+              toolInput: event?.tool_input,
+              toolSummary:
+                typeof event?.tool_summary === "string"
+                  ? event.tool_summary
+                  : undefined,
+              decision: event?.decision,
+              proposedThreshold:
+                typeof event?.proposed_threshold === "number"
+                  ? event.proposed_threshold
+                  : undefined,
+              requestId:
+                typeof event?.request_id === "string" ? event.request_id : undefined,
+            }))
+          : [],
+      })),
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Threshold analysis failed.",
+    }
+  }
 }
 
 export async function createProductAction(
