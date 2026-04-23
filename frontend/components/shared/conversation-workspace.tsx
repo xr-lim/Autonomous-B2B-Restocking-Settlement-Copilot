@@ -18,7 +18,8 @@ import {
   ZoomIn,
 } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, useEffect } from "react"
+import { io, Socket } from "socket.io-client"
 
 import { AiReasoningTrail } from "@/components/shared/ai-reasoning-trail"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -123,9 +124,51 @@ export function ConversationWorkspace({
   >(null)
   const [preview, setPreview] = useState<PreviewTarget | null>(null)
   const [pulseMessageId, setPulseMessageId] = useState<string | null>(null)
-  const [pdfInlineOpen, setPdfInlineOpen] = useState<Record<string, boolean>>(
-    {}
-  )
+  const [pdfInlineOpen, setPdfInlineOpen] = useState<Record<string, boolean>>({})
+
+  // Socket Live Integration Additions
+  const [socket, setSocket] = useState<Socket | null>(null)
+  const [liveMessages, setLiveMessages] = useState<any[]>([])
+  const [isStartingWorkflow, setIsStartingWorkflow] = useState(false)
+
+  useEffect(() => {
+    const newSocket = io("http://localhost:8000", { transports: ["websocket"] })
+
+    newSocket.on("connect", () => {
+      newSocket.emit("join_room_event", { room_id: "100", role: "merchant_dashboard" })
+    })
+
+    newSocket.on("receive_message", (data: any) => {
+      if (data.sender !== "System") {
+         setLiveMessages((prev) => [...prev, {
+            id: `live-${Math.random()}`,
+            type: data.sender === "Supplier" ? "supplier-message" : "merchant-action",
+            author: data.sender === "Supplier" ? supplier?.name || "Supplier" : "Z.AI Auto-Action",
+            sentiment: "neutral",
+            body: data.content,
+            language: "EN"
+         }])
+      }
+    })
+
+    setSocket(newSocket)
+    return () => { newSocket.disconnect() }
+  }, [supplier?.name])
+
+  const handleStartWorkflow = async () => {
+    setIsStartingWorkflow(true)
+    try {
+      await fetch(`http://localhost:8000/api/v1/chat/100/start`, { method: "POST" })
+    } finally {
+      setIsStartingWorkflow(false)
+    }
+  }
+
+  const handleInterrupt = () => {
+     if (socket) {
+        socket.emit("stop_ai", { room_id: "100" })
+     }
+  }
 
   const reasoning = useMemo(
     () => buildConversationReasoning(conversation, linkedProducts),
@@ -284,9 +327,12 @@ export function ConversationWorkspace({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <StatusBadge label="Z.AI live" tone="ai" />
+                  <button onClick={handleStartWorkflow} disabled={isStartingWorkflow} className="focus:outline-none transition-opacity hover:opacity-80">
+                     <StatusBadge label={isStartingWorkflow ? "Booting..." : "Z.AI live"} tone="ai" />
+                  </button>
                   <Button
                     type="button"
+                    onClick={handleInterrupt}
                     className="h-8 rounded-[10px] bg-[#EF4444] px-3 text-[13px] text-white hover:bg-[#DC2626]"
                   >
                     <CircleStop className="size-3.5" aria-hidden="true" />
@@ -322,7 +368,7 @@ export function ConversationWorkspace({
               ) : null}
 
               <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
-                {messages.map((message) => {
+                {[...messages, ...liveMessages].map((message) => {
                   const invoice = message.invoiceId
                     ? invoicesById[message.invoiceId]
                     : undefined
@@ -400,7 +446,7 @@ export function ConversationWorkspace({
                     <Button className="h-10 rounded-[10px] bg-[#172033] px-4 text-[#E5E7EB] hover:bg-[#243047]">
                       View Z.AI Analysis
                     </Button>
-                    <Button className="h-10 rounded-[10px] bg-[#EF4444] px-4 text-white hover:bg-[#DC2626]">
+                    <Button onClick={handleInterrupt} className="h-10 rounded-[10px] bg-[#EF4444] px-4 text-white hover:bg-[#DC2626]">
                       <CircleStop className="size-4" aria-hidden="true" />
                       Interrupt & Take Over
                     </Button>
