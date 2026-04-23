@@ -19,6 +19,8 @@ export function SupplierChat() {
   const [inputValue, setInputValue] = useState("")
   const [joined, setJoined] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [showMedia, setShowMedia] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -108,9 +110,9 @@ export function SupplierChat() {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#0f0f0f] text-white font-sans">
       {/* Sidebar - Telegram aesthetic */}
-      <div className="hidden w-[350px] flex-col border-r border-[#212121] bg-[#1c1c1d] sm:flex">
+      <div className={`w-[350px] flex-col border-r border-[#212121] bg-[#1c1c1d] ${sidebarOpen ? "flex" : "hidden"}`}>
         <div className="flex items-center gap-4 px-4 h-14">
-          <button className="text-gray-400 hover:text-white"><Menu className="size-6" /></button>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-400 hover:text-white"><Menu className="size-6" /></button>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-500" />
             <input 
@@ -135,21 +137,6 @@ export function SupplierChat() {
               <p className="truncate text-sm text-[#e5e5ea]">Negotiation terms received</p>
             </div>
           </div>
-          {/* Fake Inactive Chats */}
-          {[1,2,3,4].map((i) => (
-            <div key={i} className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-[#2c2c2e]">
-              <div className="flex size-12 items-center justify-center rounded-full bg-[#4b5563] text-lg font-bold">
-                J
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <div className="flex justify-between">
-                  <span className="font-medium text-white">Logistics Support {i}</span>
-                  <span className="text-xs text-gray-500">Yesterday</span>
-                </div>
-                <p className="truncate text-sm text-gray-400">Please confirm shipping</p>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -161,6 +148,11 @@ export function SupplierChat() {
         {/* Header */}
         <div className="flex h-14 items-center justify-between border-b border-[#2c2c2e] bg-[#1c1c1d] px-4 z-10 w-full">
           <div className="flex items-center gap-3">
+            {!sidebarOpen && (
+              <button onClick={() => setSidebarOpen(true)} className="text-gray-400 hover:text-white mr-2">
+                <Menu className="size-6" />
+              </button>
+            )}
             <div className="flex size-10 items-center justify-center rounded-full bg-[#3b82f6] text-sm font-bold">M</div>
             <div>
               <h2 className="font-medium tracking-wide">Merchant Team</h2>
@@ -170,7 +162,7 @@ export function SupplierChat() {
           <div className="flex gap-4 text-gray-400">
             <Search className="size-5 hover:text-white cursor-pointer" />
             <Phone className="size-5 hover:text-white cursor-pointer" />
-            <MoreVertical className="size-5 hover:text-white cursor-pointer" />
+            <MoreVertical onClick={() => setShowMedia(!showMedia)} className="size-5 hover:text-white cursor-pointer" />
           </div>
         </div>
 
@@ -260,7 +252,7 @@ export function SupplierChat() {
               </button>
             </div>
             
-            {inputValue.trim() ? (
+            {inputValue.trim() || selectedFile ? (
               <button 
                 onClick={handleSend}
                 className="flex size-14 items-center justify-center rounded-full bg-[#8774e1] text-white shadow hover:bg-[#7261cc]"
@@ -271,6 +263,38 @@ export function SupplierChat() {
           </div>
         </div>
       </div>
+
+      {/* Right Media Sidebar */}
+      {showMedia && (
+        <div className="w-[300px] flex-col border-l border-[#212121] bg-[#1c1c1d] flex z-20">
+          <div className="flex items-center gap-4 px-4 h-14 border-b border-[#2c2c2e]">
+            <button onClick={() => setShowMedia(false)} className="text-gray-400 hover:text-white">
+              <X className="size-5" />
+            </button>
+            <h2 className="font-medium tracking-wide">Shared Media</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.filter(m => m.file_url).length === 0 ? (
+              <p className="text-sm text-gray-500 text-center mt-10">No media shared yet.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {messages.filter(m => m.file_url).map((msg, idx) => (
+                  <div key={idx} className="aspect-square bg-[#2c2c2e] rounded-lg overflow-hidden flex items-center justify-center relative group p-2">
+                    {msg.file_type?.startsWith("image/") ? (
+                      <img src={msg.file_url} alt={msg.file_name || "image"} className="w-full h-full object-cover cursor-pointer rounded" onClick={() => window.open(msg.file_url, "_blank")} />
+                    ) : (
+                      <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center p-2 text-center text-xs text-gray-300 hover:text-white w-full h-full justify-center">
+                        <FileText className="size-8 text-[#8774e1] mb-2" />
+                        <span className="truncate w-full px-1" title={msg.file_name}>{msg.file_name}</span>
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
