@@ -69,7 +69,9 @@ export function DashboardThresholdReasoningTerminal({
         <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#93C5FD]">
           Threshold Reasoning Terminal
         </p>
-        <p className="font-mono text-[11px] text-[#6B7280]">{renderedAt}</p>
+        <p suppressHydrationWarning className="font-mono text-[11px] text-[#6B7280]">
+          {renderedAt}
+        </p>
       </div>
 
       <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 font-mono text-[12px] leading-5 text-[#D1D5DB]">
