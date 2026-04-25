@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from typing import Any
 
 import httpx
@@ -69,10 +71,42 @@ async def create_message(
     if tool_choice:
         payload["tool_choice"] = tool_choice
 
-    async with httpx.AsyncClient(timeout=AI_TIMEOUT_SECONDS) as client:
-        response = await client.post(_messages_endpoint(), headers=headers, json=payload)
-        response.raise_for_status()
-        return response.json()
+    # LLM responses can take a while (especially with tool loops). Use a long
+    # read timeout, and retry once on transient timeouts.
+    timeout_seconds = max(float(AI_TIMEOUT_SECONDS), 900.0)
+    timeout = httpx.Timeout(connect=10.0, read=timeout_seconds, write=60.0, pool=10.0)
+
+    logger = logging.getLogger(__name__)
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                if attempt == 0:
+                    print("OUTGOING LLM PAYLOAD:", json.dumps(payload, indent=2, default=str))
+                response = await client.post(
+                    _messages_endpoint(), headers=headers, json=payload
+                )
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    # Log the gateway's validation/error body for visibility (Ilmu/Anthropic often
+                    # returns helpful JSON here, but sometimes it's plain text).
+                    logger.error(
+                        "LLM API returned non-2xx: %s %s\nResponse body:\n%s",
+                        exc.response.status_code,
+                        str(exc.request.url),
+                        exc.response.text,
+                    )
+                    raise
+
+                return response.json()
+        except (httpx.ReadTimeout, httpx.ConnectTimeout) as exc:
+            logger.warning(
+                "LLM request timeout (attempt %s/2): %s",
+                attempt + 1,
+                repr(exc),
+            )
+            if attempt == 1:
+                raise
 
 
 def messages_endpoint() -> str:
