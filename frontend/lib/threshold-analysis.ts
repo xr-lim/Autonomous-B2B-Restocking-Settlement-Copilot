@@ -28,6 +28,28 @@ export type ThresholdAnalysisResult = {
   results?: ThresholdReasoningItem[]
 }
 
+type ThresholdTraceEventPayload = {
+  kind?: string
+  message?: string
+  tool_name?: string
+  tool_input?: unknown
+  tool_summary?: string
+  decision?: unknown
+  proposed_threshold?: number | null
+  request_id?: string
+}
+
+type ThresholdResultPayload = {
+  sku: string
+  product_name?: string
+  status: string
+  detail?: string
+  current_threshold?: number | null
+  proposed_threshold?: number | null
+  confidence?: number | null
+  trace?: ThresholdTraceEventPayload[]
+}
+
 function backendApiBaseUrl() {
   return (
     process.env.NEXT_PUBLIC_BACKEND_API_URL ??
@@ -82,7 +104,7 @@ export async function analyzeThresholds(
           : "Threshold analysis finished with no new requests.",
       analyzedCount: payload?.analyzed_count,
       createdCount: payload?.created_count,
-      results: (payload?.results ?? []).map((item: any) => ({
+      results: (payload?.results ?? []).map((item: ThresholdResultPayload) => ({
         sku: item.sku,
         productName: item.product_name,
         status: item.status,
@@ -93,7 +115,7 @@ export async function analyzeThresholds(
           typeof item.proposed_threshold === "number" ? item.proposed_threshold : null,
         confidence: typeof item.confidence === "number" ? item.confidence : null,
         trace: Array.isArray(item.trace)
-          ? item.trace.map((event) => ({
+          ? item.trace.map((event: ThresholdTraceEventPayload) => ({
               kind: typeof event?.kind === "string" ? event.kind : "event",
               message: typeof event?.message === "string" ? event.message : "",
               toolName:
@@ -151,13 +173,13 @@ export async function analyzeRestockSuggestions(): Promise<ThresholdAnalysisResu
           : "Restock analysis finished with no new requests.",
       analyzedCount: payload?.analyzed_count,
       createdCount: payload?.created_count,
-      results: (payload?.results ?? []).map((item: any) => ({
+      results: (payload?.results ?? []).map((item: ThresholdResultPayload) => ({
         sku: item.sku,
         productName: item.product_name,
         status: item.status,
         detail: item.detail,
         trace: Array.isArray(item.trace)
-          ? item.trace.map((event: any) => ({
+          ? item.trace.map((event: ThresholdTraceEventPayload) => ({
               kind: typeof event?.kind === "string" ? event.kind : "event",
               message: typeof event?.message === "string" ? event.message : "",
               toolName:
