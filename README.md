@@ -187,10 +187,10 @@ Data → Prompt Builder → GLM → Structured Output → Workflow Engine
 
 | Member | Role |
 |------|------|
-| Member A | Frontend (Dashboard UI) |
-| Member B | Backend (API & DB) |
-| Member C | AI + Workflow (GLM + Temporal) |
-| Member D | Data, Testing & Demo |
+| Benjamin Lim Shi Hern | negotiation module |
+| Chen Wei Jay Nickolas | Frontend & Backend + invoice processing module |
+| Chu Cheng Qing | Data, Testing, Threshold Analysis module |
+| Lim Xin Rou |  webSockets, Stock request module |
 
 ---
 
