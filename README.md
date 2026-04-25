@@ -4,6 +4,8 @@
 > AI-powered procurement workflow system that automates inventory monitoring, supplier negotiation, and invoice processing for SMEs.
 
 ---
+### Pitching video:
+link: 
 
 ## 📌 Overview
 
@@ -82,14 +84,14 @@ Bee2Bee follows a **modular, workflow-driven architecture**:
 - **Frontend:** Dashboard UI  
 - **Backend:** API & orchestration  
 - **Workflow Engine:** Stateful execution (Temporal)  
-- **AI Layer:** Decision-making (Z.AI GLM)  
+- **AI Layer:** Decision-making (Gemini 2.5 Flash) 
 - **Database:** Persistent storage (Supabase)  
 
 ---
 
 ## 🧠 AI Integration (Core Innovation)
 
-The system leverages **Z.AI GLM** as a reasoning engine:
+The system leverages **ILMU GLM 5.1** as a reasoning engine:
 
 - Multi-step decision making  
 - Structured JSON outputs  
@@ -97,7 +99,7 @@ The system leverages **Z.AI GLM** as a reasoning engine:
 - Context-aware negotiation  
 
 ### Prompt Flow: 
-Data → Prompt Builder → GLM → Structured Output → Workflow Engine
+Data → Prompt Builder → ILMU GLM 5.1 → Structured Output → Workflow Engine
 
 
 ---
@@ -126,14 +128,11 @@ Data → Prompt Builder → GLM → Structured Output → Workflow Engine
 ### Backend
 - FastAPI (Python)
 
-### Workflow Engine
-- Temporal (stateful orchestration)
-
 ### Database & Storage
 - Supabase (PostgreSQL + Storage)
 
 ### AI Layer
-- Z.AI GLM API
+- ILMU GLM 5.1
 
 ### Real-Time
 - WebSockets / Supabase Realtime
