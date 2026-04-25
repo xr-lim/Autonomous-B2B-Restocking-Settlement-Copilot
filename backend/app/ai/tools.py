@@ -12,7 +12,7 @@ from typing import Any, Literal
 from dotenv import load_dotenv
 from langchain_core.tools import tool
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import MetaData, Table, create_engine, desc, func, insert, select, update
+from sqlalchemy import MetaData, Table, create_engine, desc, func, insert, select, update, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -1897,6 +1897,11 @@ def _create_final_order_impl(
     submitted_orders = table("submitted_orders")
 
     with session_scope() as session:
+        # Fetch workflow_id
+        stmt = text("SELECT workflow_id FROM restock_requests WHERE id = :id")
+        res = session.execute(stmt, {"id": restock_request_id}).first()
+        workflow_id = res[0] if res else None
+
         order_id = f"ord-{uuid.uuid4().hex[:12]}"
 
         created_order = session.execute(
@@ -1911,6 +1916,23 @@ def _create_final_order_impl(
             )
             .returning(*submitted_orders.c)
         ).mappings().one()
+
+        if workflow_id:
+            session.execute(
+                text("UPDATE workflows SET current_state = 'waiting_supplier', approval_state = 'waiting_approval', updated_at = now() WHERE id = :id"),
+                {"id": workflow_id}
+            )
+            session.execute(
+                text("INSERT INTO workflow_events (id, workflow_id, state, note, actor_type, created_at) VALUES (:eid, :wid, :state, :note, :actor, now())"),
+                {
+                    "eid": f"we-{uuid.uuid4().hex[:12]}",
+                    "wid": workflow_id,
+                    "state": "waiting_supplier",
+                    "note": f"Purchase order {order_id} created. Sending to supplier.",
+                    "actor": "ai"
+                }
+            )
+
         session.commit()
 
         return dict(created_order)
@@ -1926,6 +1948,18 @@ def _record_invoice_impl(
     invoices = table("invoices")
 
     with session_scope() as session:
+        workflow_id = None
+        if order_id:
+            stmt = text("""
+                SELECT rr.workflow_id 
+                FROM submitted_orders so 
+                JOIN restock_requests rr ON so.restock_request_id = rr.id 
+                WHERE so.id = :oid
+            """)
+            res = session.execute(stmt, {"oid": order_id}).first()
+            if res:
+                workflow_id = res[0]
+
         invoice_id = f"inv-{uuid.uuid4().hex[:12]}"
 
         # Provide defaults for required fields
@@ -1946,12 +1980,31 @@ def _record_invoice_impl(
         }
         if "order_id" in invoices.c:
             invoice_values["order_id"] = order_id
+        if workflow_id and "workflow_id" in invoices.c:
+            invoice_values["workflow_id"] = workflow_id
 
         created_invoice = session.execute(
             insert(invoices)
             .values(**invoice_values)
             .returning(*invoices.c)
         ).mappings().one()
+
+        if workflow_id:
+            session.execute(
+                text("UPDATE workflows SET current_state = 'invoice_processing', updated_at = now() WHERE id = :id"),
+                {"id": workflow_id}
+            )
+            session.execute(
+                text("INSERT INTO workflow_events (id, workflow_id, state, note, actor_type, created_at) VALUES (:eid, :wid, :state, :note, :actor, now())"),
+                {
+                    "eid": f"we-{uuid.uuid4().hex[:12]}",
+                    "wid": workflow_id,
+                    "state": "invoice_processing",
+                    "note": f"Supplier invoice {final_invoice_number} recorded.",
+                    "actor": "ai"
+                }
+            )
+
         session.commit()
 
         return dict(created_invoice)

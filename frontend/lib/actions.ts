@@ -3130,6 +3130,27 @@ export async function analyzeInvoiceAction(
       })
     )
 
+    if (context.invoice.workflow_id) {
+      await throwIfSupabaseError(
+        await supabase
+          .from("workflows")
+          .update({
+            current_state: "ready_for_approval",
+          })
+          .eq("id", context.invoice.workflow_id)
+      )
+
+      await throwIfSupabaseError(
+        await supabase.from("workflow_events").insert({
+          id: id("we"),
+          workflow_id: context.invoice.workflow_id,
+          state: "ready_for_approval",
+          note: "Invoice AI analysis finished. Ready for finance review.",
+          actor_type: usedFallback ? "system" : "ai",
+        })
+      )
+    }
+
     revalidatePath("/dashboard")
     revalidatePath("/invoice-management")
     revalidatePath("/invoice-management/completed")
@@ -3349,13 +3370,6 @@ async function syncInvoiceWorkflowState(
           .from("restock_requests")
           .delete()
           .eq("workflow_id", invoice.workflow_id)
-      )
-
-      await throwIfSupabaseError(
-        await supabase
-          .from("workflows")
-          .delete()
-          .eq("id", invoice.workflow_id)
       )
     } else if (options.workflowState && options.workflowApprovalState) {
       await throwIfSupabaseError(
@@ -3664,16 +3678,19 @@ export async function setInvoiceDecisionAction(
 
         await throwIfSupabaseError(
           await supabase
-            .from("restock_requests")
-            .delete()
-            .eq("workflow_id", invoice.workflow_id)
+            .from("workflows")
+            .update({
+              current_state: "completed",
+              approval_state: "completed",
+            })
+            .eq("id", invoice.workflow_id)
         )
 
         await throwIfSupabaseError(
           await supabase
-            .from("workflows")
+            .from("restock_requests")
             .delete()
-            .eq("id", invoice.workflow_id)
+            .eq("workflow_id", invoice.workflow_id)
         )
       } else {
         await throwIfSupabaseError(

@@ -444,11 +444,6 @@ export function ConversationWorkspace({
     [conversation.id, isConversationComplete]
   )
 
-  const reasoning = useMemo(
-    () => buildConversationReasoning(conversation, linkedProducts),
-    [conversation, linkedProducts]
-  )
-
   const openPreview = useCallback(
     (target: PreviewTarget) => setPreview(target),
     []
@@ -492,7 +487,7 @@ export function ConversationWorkspace({
 
   return (
     <>
-      <section className="grid grid-cols-[300px_1fr_340px] gap-6">
+      <section className="grid grid-cols-[300px_1fr] gap-6">
         <aside className="space-y-4">
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
@@ -755,142 +750,6 @@ export function ConversationWorkspace({
             </CardContent>
           </Card>
         </main>
-
-        <aside className="space-y-4">
-          <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
-            <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
-                AI Extraction Panel
-              </CardTitle>
-              <p className="mt-1 text-[13px] text-[#9CA3AF]">
-                Hover a field to highlight the source message Z.AI parsed it
-                from.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4">
-              <HoverableField
-                label="Extracted Price"
-                value={conversation.aiExtraction.extractedPrice}
-                onHover={() => handleFieldHover("extractedPrice")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Extracted Quantity"
-                value={conversation.aiExtraction.extractedQuantity}
-                onHover={() => handleFieldHover("extractedQuantity")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Delivery Estimate"
-                value={conversation.aiExtraction.deliveryEstimate}
-                onHover={() => handleFieldHover("deliveryEstimate")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Supplier Language"
-                value={conversation.aiExtraction.supplierLanguage}
-                onHover={() => handleFieldHover("supplierLanguage")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Detected Intent"
-                value={conversation.aiExtraction.detectedIntent}
-                onHover={() => handleFieldHover("detectedIntent")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <div
-                onMouseEnter={() => handleFieldHover("missingFields")}
-                onMouseLeave={() => handleFieldHover(null)}
-                className="rounded-[10px] p-2 -m-2 transition-colors hover:bg-[#172033]/60"
-              >
-                <p className="text-[13px] text-[#9CA3AF]">Missing Fields</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {conversation.aiExtraction.missingFields.length > 0 ? (
-                    conversation.aiExtraction.missingFields.map((field) => (
-                      <StatusBadge key={field} label={field} tone="warning" />
-                    ))
-                  ) : (
-                    <StatusBadge label="None" tone="success" />
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[13px] text-[#9CA3AF]">
-                    Confidence Score
-                  </span>
-                  <span className="text-[15px] font-semibold text-[#E5E7EB]">
-                    {conversation.aiExtraction.confidenceScore}%
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-[#172033]">
-                  <div
-                    className="h-2 rounded-full bg-[#8B5CF6]"
-                    style={{
-                      width: `${conversation.aiExtraction.confidenceScore}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <AiReasoningTrail
-                id={`conv-extract-${conversation.id}`}
-                signals={reasoning.signals}
-                confidence={reasoning.confidence}
-                decision={reasoning.decision}
-                density="compact"
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
-            <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
-                Next Action Panel
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-4">
-              <div className="rounded-[14px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 p-4">
-                <p className="text-[13px] font-medium text-[#C4B5FD]">
-                  Recommended next step
-                </p>
-                <p className="mt-2 text-[15px] leading-6 text-[#E5E7EB]">
-                  {conversation.nextAction.recommendedNextStep}
-                </p>
-              </div>
-              <InfoRow
-                label="Negotiation Summary"
-                value={conversation.nextAction.negotiationSummary}
-              />
-              <InfoRow
-                label="Submitted Order"
-                value={
-                  conversation.submittedOrderId
-                    ? `${conversation.submittedOrderId} · ${conversation.submittedOrderStatus ?? "Created"}`
-                    : "Pending supplier acceptance"
-                }
-              />
-              <div>
-                <p className="text-[13px] text-[#9CA3AF]">
-                  Linked Invoice Status
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  <StatusBadge
-                    label={conversation.nextAction.linkedInvoiceStatus}
-                    tone="warning"
-                  />
-                  {linkedInvoice ? (
-                    <Link
-                      href={`/invoice-management/${linkedInvoice.id}`}
-                      className="text-[13px] font-medium text-[#3B82F6] hover:text-[#93C5FD]"
-                    >
-                      Open invoice
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
       </section>
 
       <EvidenceSheet
