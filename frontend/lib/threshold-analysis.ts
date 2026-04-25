@@ -80,7 +80,15 @@ export async function analyzeThresholds(
           : "Threshold analysis finished with no new requests.",
       analyzedCount: payload?.analyzed_count,
       createdCount: payload?.created_count,
-      results: (payload?.results ?? []).map((item: { sku: string; status: string; detail?: string }) => ({
+      results: (payload?.results ?? []).map((item: {
+        sku: string
+        status: string
+        detail?: string
+        current_threshold?: number | null
+        proposed_threshold?: number | null
+        confidence?: number | null
+        trace?: Array<Record<string, unknown>>
+      }) => ({
         sku: item.sku,
         status: item.status,
         detail: item.detail,
