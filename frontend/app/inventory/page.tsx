@@ -1,32 +1,46 @@
-import { AlertTriangle, Boxes, PackageCheck, Sparkles } from "lucide-react"
+import { AlertTriangle, Boxes, PackageCheck } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
-import { FilterToolbar } from "@/components/shared/filter-toolbar"
-import { InventoryListCharts } from "@/components/shared/inventory-charts"
 import { InventoryTableClient } from "@/components/shared/inventory-table-client"
 import { RestockAlertPanel } from "@/components/shared/restock-alert-panel"
 import { StatCard } from "@/components/shared/stat-card"
 import { ThresholdChangeRequestList } from "@/components/shared/threshold-change-request-list"
 import {
-  inventorySummaryStats,
-  mockProducts,
-  mockSuppliers,
-  restockRecommendations,
-  thresholdChangeRequests,
-} from "@/lib/mock-data"
+  getInventorySummaryStats,
+  getProducts,
+  getRestockRecommendations,
+  getSuppliers,
+  getThresholdChangeRequests,
+} from "@/lib/data"
 
-const summaryIcons = [Boxes, AlertTriangle, PackageCheck, Sparkles]
+export const dynamic = "force-dynamic"
 
-export default function InventoryPage() {
+const summaryIcons = [Boxes, AlertTriangle, PackageCheck]
+
+export default async function InventoryPage() {
+  const [
+    inventorySummaryStats,
+    products,
+    suppliers,
+    restockRecommendations,
+    thresholdChangeRequests,
+  ] = await Promise.all([
+    getInventorySummaryStats(),
+    getProducts(),
+    getSuppliers(),
+    getRestockRecommendations(),
+    getThresholdChangeRequests(),
+  ])
+
   return (
     <>
       <PageHeader
         eyebrow="Inventory"
         title="Inventory"
-        description="Track current stock, AI threshold changes, and supplier-linked restocking opportunities."
+        description="Track current stock, threshold changes, and supplier-linked restocking opportunities."
       />
 
-      <section className="grid grid-cols-4 gap-4">
+      <section className="grid grid-cols-3 gap-4">
         {inventorySummaryStats.map((stat, index) => (
           <StatCard
             key={stat.title}
@@ -43,17 +57,16 @@ export default function InventoryPage() {
 
       <ThresholdChangeRequestList
         requests={thresholdChangeRequests}
-        products={mockProducts}
-        description="Z.AI proposes these threshold updates based on velocity, lead time and bundle signals. Approve to apply instantly to the AI threshold column."
+        products={products}
+        variant="preview"
+        defaultOpen
+        title="Pending Threshold Change Requests"
+        description="Short preview · open the product detail to review the full AI reasoning and confirm the new threshold."
       />
 
-      <InventoryListCharts />
-
-      <FilterToolbar searchPlaceholder="Search by SKU, product, supplier, or stock status..." />
-
       <InventoryTableClient
-        initialProducts={mockProducts}
-        suppliers={mockSuppliers}
+        initialProducts={products}
+        suppliers={suppliers}
       />
     </>
   )

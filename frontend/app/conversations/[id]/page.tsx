@@ -7,16 +7,18 @@ import { ConversationWorkspace } from "@/components/shared/conversation-workspac
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
-  mockConversations,
-  mockInvoices,
-  mockNegotiationMessages,
-  mockProducts,
-  mockSuppliers,
-} from "@/lib/mock-data"
+  getConversations,
+  getInvoices,
+  getProducts,
+  getSuppliers,
+} from "@/lib/data"
 import type { Conversation, Invoice, Product } from "@/lib/types"
 
-export function generateStaticParams() {
-  return mockConversations.map((conversation) => ({ id: conversation.id }))
+export const dynamic = "force-dynamic"
+
+export async function generateStaticParams() {
+  const conversations = await getConversations()
+  return conversations.map((conversation) => ({ id: conversation.id }))
 }
 
 export default async function ConversationDetailPage({
@@ -25,26 +27,32 @@ export default async function ConversationDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const conversation = mockConversations.find((item) => item.id === id)
+  const [conversations, invoices, products, suppliers] = await Promise.all([
+    getConversations(),
+    getInvoices(),
+    getProducts(),
+    getSuppliers(),
+  ])
+
+  const conversation = conversations.find((item) => item.id === id)
 
   if (!conversation) {
     notFound()
   }
 
-  const supplier = mockSuppliers.find(
+  const supplier = suppliers.find(
     (item) => item.id === conversation.supplierId
   )
   const linkedProducts = conversation.linkedSkus
-    .map((sku) => mockProducts.find((product) => product.sku === sku))
+    .map((sku) => products.find((product) => product.sku === sku))
     .filter((product): product is Product => Boolean(product))
-  const messages = mockNegotiationMessages.filter(
-    (item) => item.conversationId === conversation.id
-  )
-  const linkedInvoice = mockInvoices.find((invoice) =>
-    conversation.linkedSkus.includes(invoice.productSku)
-  )
+  const linkedInvoice =
+    (conversation.linkedInvoiceId
+      ? invoices.find((invoice) => invoice.id === conversation.linkedInvoiceId)
+      : undefined) ??
+    invoices.find((invoice) => invoice.workflowId === conversation.workflowId)
   const invoicesById: Record<string, Invoice> = Object.fromEntries(
-    mockInvoices.map((invoice) => [invoice.id, invoice])
+    invoices.map((invoice) => [invoice.id, invoice])
   )
   const priorityReasons =
     conversation.priority === "critical" || conversation.priority === "high"
@@ -88,7 +96,6 @@ export default async function ConversationDetailPage({
         conversation={conversation}
         supplier={supplier}
         linkedProducts={linkedProducts}
-        messages={messages}
         invoicesById={invoicesById}
         linkedInvoice={linkedInvoice}
       />
@@ -104,10 +111,10 @@ function buildPriorityReasons(
   const reasons: string[] = []
 
   products.forEach((product) => {
-    const deficit = product.stockOnHand - product.aiThreshold
+    const deficit = product.stockOnHand - product.currentThreshold
     if (deficit < 0) {
       reasons.push(
-        `${product.name} stock ${Math.abs(deficit)} units below AI threshold (${product.stockOnHand}/${product.aiThreshold})`
+        `${product.name} stock ${Math.abs(deficit)} units below current threshold (${product.stockOnHand}/${product.currentThreshold})`
       )
     }
   })

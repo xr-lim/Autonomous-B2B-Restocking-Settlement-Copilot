@@ -3,7 +3,6 @@
 import Link from "next/link"
 import {
   Bot,
-  CircleStop,
   FileImage,
   FileText,
   ImageIcon,
@@ -18,10 +17,12 @@ import {
   ZoomIn,
 } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, useEffect, useRef } from "react"
+import { io } from "socket.io-client"
 
 import { AiReasoningTrail } from "@/components/shared/ai-reasoning-trail"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { displayConversationSource } from "@/lib/conversation-source"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -47,6 +48,34 @@ import type {
   Supplier,
 } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+type MessageWithFileUrl = NegotiationMessage & { file_url?: string | null }
+const fileUrlFor = (message: NegotiationMessage) =>
+  (message as MessageWithFileUrl).file_url ?? undefined
+
+function splitThinking(body: string) {
+  try {
+    const safeBody = typeof body === "string" ? body : ""
+    const thinkingMatches = Array.from(
+      safeBody.matchAll(/<thinking>([\s\S]*?)<\/thinking>/gi)
+    )
+    const thinking = thinkingMatches
+      .map((match) => (match[1] ?? "").trim())
+      .filter(Boolean)
+      .join("\n\n")
+
+    const stripped = safeBody
+      .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+      .trim()
+
+    return {
+      thinking,
+      visible: stripped.length > 0 ? stripped : "Processing deal details...",
+    }
+  } catch {
+    return { thinking: "", visible: "Processing deal details..." }
+  }
+}
 
 const invoiceRiskTone: Record<Invoice["riskLevel"], StatusTone> = {
   "Low Risk": "success",
@@ -104,7 +133,6 @@ type ConversationWorkspaceProps = {
   conversation: Conversation
   supplier?: Supplier
   linkedProducts: Product[]
-  messages: NegotiationMessage[]
   invoicesById: Record<string, Invoice>
   linkedInvoice?: Invoice
 }
@@ -113,22 +141,307 @@ export function ConversationWorkspace({
   conversation,
   supplier,
   linkedProducts,
-  messages,
   invoicesById,
   linkedInvoice,
 }: ConversationWorkspaceProps) {
+  type SocketMessagePayload = {
+    room_id?: string
+    sender?: string
+    content?: string
+    file_url?: string | null
+    file_name?: string | null
+    file_type?: string | null
+  }
+
   const [highlightedMessageId, setHighlightedMessageId] = useState<
     string | null
   >(null)
   const [preview, setPreview] = useState<PreviewTarget | null>(null)
   const [pulseMessageId, setPulseMessageId] = useState<string | null>(null)
-  const [pdfInlineOpen, setPdfInlineOpen] = useState<Record<string, boolean>>(
-    {}
+  const [pdfInlineOpen, setPdfInlineOpen] = useState<Record<string, boolean>>({})
+
+  const [liveMessages, setLiveMessages] = useState<MessageWithFileUrl[]>([])
+  const [isWaitingForAI, setIsWaitingForAI] = useState(false)
+  const seenMessageSignaturesRef = useRef<Set<string>>(new Set())
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const autoStartAttemptedRef = useRef(false)
+  const imageUploadInputRef = useRef<HTMLInputElement>(null)
+  const pdfUploadInputRef = useRef<HTMLInputElement>(null)
+
+  // Negotiation state
+  const [isNegotiating, setIsNegotiating] = useState(false)
+  const [supplierReply, setSupplierReply] = useState("")
+  const [isSendingReply, setIsSendingReply] = useState(false)
+
+  const isConversationComplete = useMemo(() => {
+    const stateRaw =
+      String((conversation as unknown as { state?: string }).state ?? "").trim()
+    const normalizedState = stateRaw.toLowerCase()
+    return (
+      normalizedState === "completed" ||
+      normalizedState === "closed" ||
+      conversation.negotiationState === "Closed"
+    )
+  }, [conversation])
+
+  const shouldAutoStartNegotiation = useMemo(
+    () =>
+      !isConversationComplete &&
+      (conversation.negotiationState === "New Input" ||
+        conversation.negotiationState === "Needs Analysis"),
+    [conversation.negotiationState, isConversationComplete]
   )
 
-  const reasoning = useMemo(
-    () => buildConversationReasoning(conversation, linkedProducts),
-    [conversation, linkedProducts]
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [liveMessages.length])
+
+  useEffect(() => {
+    const newSocket = io("http://localhost:8000", { transports: ["websocket"] })
+
+    newSocket.on("connect", () => {
+      newSocket.emit("join_room_event", {
+        room_id: conversation.id,
+        role: "merchant_dashboard",
+      })
+    })
+
+    newSocket.on("receive_message", (data: SocketMessagePayload) => {
+      const sender = String(data?.sender ?? "")
+      if (sender.toLowerCase() === "system") return
+
+      const isAiSender =
+        /\b(ai|assistant|bot)\b/i.test(sender) || /z\.ai/i.test(sender)
+      const isSupplierSender =
+        sender.toLowerCase().includes("supplier") ||
+        (supplier?.name ? sender.toLowerCase() === supplier.name.toLowerCase() : false)
+
+      if (isAiSender) {
+        setIsWaitingForAI(false)
+      }
+
+      let attachmentType: "image" | "pdf" | undefined = undefined
+      if (data?.file_url) {
+        if (String(data.file_type ?? "").includes("image")) attachmentType = "image"
+        else if (String(data.file_type ?? "").includes("pdf")) attachmentType = "pdf"
+      }
+
+      const content =
+        typeof data?.content === "string" && data.content.trim().length > 0
+          ? data.content.trim()
+          : attachmentType === "image"
+            ? "Uploaded an image"
+            : attachmentType === "pdf"
+              ? "Uploaded a document"
+              : "New message"
+
+      const signature = [
+        sender.toLowerCase(),
+        content,
+        String(data?.file_url ?? ""),
+        String(data?.file_name ?? ""),
+      ].join("|")
+      if (seenMessageSignaturesRef.current.has(signature)) return
+      seenMessageSignaturesRef.current.add(signature)
+
+    setLiveMessages((prev) => [
+        ...prev,
+        {
+          id: `live-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          conversationId: conversation.id,
+          supplierId: conversation.supplierId,
+          type: isAiSender
+            ? "ai-recommendation"
+            : isSupplierSender
+              ? "supplier-message"
+              : "merchant-action",
+          author: isAiSender ? "ai" : isSupplierSender ? "supplier" : "merchant",
+          sentiment: "neutral",
+          body: content,
+          language: "EN",
+          createdAt: new Date().toISOString(),
+          attachmentType,
+          attachmentLabel:
+            typeof data?.file_name === "string" ? data.file_name : undefined,
+          file_url: data?.file_url ?? null,
+        },
+      ])
+    })
+
+    return () => { newSocket.disconnect() }
+  }, [conversation.id, conversation.supplierId, supplier?.name])
+
+  const handleStartNegotiation = useCallback(async () => {
+    if (isConversationComplete) return
+    setIsWaitingForAI(true)
+    setIsNegotiating(true)
+    try {
+      const response = await fetch("http://localhost:8000/api/v1/negotiation/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversation_id: conversation.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "")
+        throw new Error(
+          `Failed to start negotiation: ${response.status} ${response.statusText}${
+            errorText ? `\n${errorText}` : ""
+          }`
+        )
+      }
+
+      try {
+        const result = await response.json()
+        console.log("Negotiation started:", result)
+      } catch {
+        // Backend might reply with an empty body or non-JSON; don't crash the UI.
+      }
+    } catch (error) {
+      autoStartAttemptedRef.current = false
+      console.error("Failed to start negotiation:", error)
+      alert("Failed to start negotiation. Check console for details.")
+      setIsWaitingForAI(false)
+    } finally {
+      setIsNegotiating(false)
+    }
+  }, [conversation.id, isConversationComplete])
+
+  useEffect(() => {
+    if (!shouldAutoStartNegotiation || autoStartAttemptedRef.current) return
+    autoStartAttemptedRef.current = true
+    void handleStartNegotiation()
+  }, [handleStartNegotiation, shouldAutoStartNegotiation])
+
+  const handleSendSupplierReply = async () => {
+    if (!supplierReply.trim()) return
+    if (isConversationComplete) return
+
+    setIsWaitingForAI(true)
+
+    const optimisticContent = supplierReply.trim()
+    const optimisticSignature = ["supplier", optimisticContent, "", ""].join("|")
+    seenMessageSignaturesRef.current.add(optimisticSignature)
+    setLiveMessages((prev) => [
+      ...prev,
+      {
+        id: `local-supplier-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        conversationId: conversation.id,
+        supplierId: conversation.supplierId,
+        type: "supplier-message",
+        author: "supplier",
+        sentiment: "neutral",
+        body: optimisticContent,
+        language: "EN",
+        createdAt: new Date().toISOString(),
+      },
+    ])
+
+    setIsSendingReply(true)
+    try {
+      const response = await fetch("http://localhost:8000/api/v1/negotiation/webhook", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversation_id: conversation.id,
+          supplier_message: optimisticContent,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "")
+        throw new Error(
+          `Failed to send reply: ${response.status} ${response.statusText}${
+            errorText ? `\n${errorText}` : ""
+          }`
+        )
+      }
+
+      try {
+        const result = await response.json()
+        console.log("Supplier reply processed:", result)
+      } catch {
+        // Backend might reply with an empty body or non-JSON; don't crash the UI.
+      }
+      setSupplierReply("")
+    } catch (error) {
+      console.error("Failed to send supplier reply:", error)
+      alert("Failed to send reply. Check console for details.")
+      setIsWaitingForAI(false)
+    } finally {
+      setIsSendingReply(false)
+    }
+  }
+
+  const handleSendSupplierFile = useCallback(
+    async (file: File | null) => {
+      if (!file || isConversationComplete) return
+
+      setIsWaitingForAI(true)
+      setIsSendingReply(true)
+
+      try {
+        const uploadForm = new FormData()
+        uploadForm.append("file", file)
+
+        const uploadResponse = await fetch("http://localhost:8000/api/v1/chat/upload", {
+          method: "POST",
+          body: uploadForm,
+        })
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text().catch(() => "")
+          throw new Error(
+            `Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}${
+              errorText ? `\n${errorText}` : ""
+            }`
+          )
+        }
+
+        const uploadResult = await uploadResponse.json()
+        const response = await fetch("http://localhost:8000/api/v1/negotiation/webhook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            conversation_id: conversation.id,
+            supplier_message: null,
+            file_url: uploadResult.file_url,
+            file_name: uploadResult.file_name,
+            file_type: uploadResult.file_type,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "")
+          throw new Error(
+            `Failed to send attachment: ${response.status} ${response.statusText}${
+              errorText ? `\n${errorText}` : ""
+            }`
+          )
+        }
+
+        try {
+          await response.json()
+        } catch {
+          // Backend might reply with an empty body or non-JSON; don't crash the UI.
+        }
+      } catch (error) {
+        console.error("Failed to send supplier attachment:", error)
+        alert("Failed to send attachment. Check console for details.")
+        setIsWaitingForAI(false)
+      } finally {
+        setIsSendingReply(false)
+      }
+    },
+    [conversation.id, isConversationComplete]
   )
 
   const openPreview = useCallback(
@@ -143,12 +456,12 @@ export function ConversationWorkspace({
         setHighlightedMessageId(null)
         return
       }
-      const id = getEvidenceSourceMessageId(messages, field)
+      const id = getEvidenceSourceMessageId(liveMessages, field)
       if (id) {
         setHighlightedMessageId(id)
       }
     },
-    [messages]
+    [liveMessages]
   )
 
   const handleAttachmentClick = useCallback(
@@ -174,7 +487,7 @@ export function ConversationWorkspace({
 
   return (
     <>
-      <section className="grid grid-cols-[300px_1fr_340px] gap-6">
+      <section className="grid grid-cols-[300px_1fr] gap-6">
         <aside className="space-y-4">
           <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
             <CardHeader className="border-b border-[#243047] p-4">
@@ -187,7 +500,10 @@ export function ConversationWorkspace({
                 label="Supplier"
                 value={supplier?.name ?? "Unknown supplier"}
               />
-              <InfoRow label="Source Type" value={conversation.source} />
+              <InfoRow
+                label="Source Type"
+                value={displayConversationSource(conversation.source)}
+              />
               <InfoRow
                 label="Target Price Range"
                 value={conversation.targetPriceRange}
@@ -259,7 +575,7 @@ export function ConversationWorkspace({
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[13px] text-[#9CA3AF]">
                     <span>Stock: {product.stockOnHand}</span>
-                    <span>AI threshold: {product.aiThreshold}</span>
+                    <span>Threshold: {product.currentThreshold}</span>
                   </div>
                 </div>
               ))}
@@ -279,24 +595,37 @@ export function ConversationWorkspace({
                     Z.AI negotiating autonomously with {supplier?.name}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge label="Z.AI live" tone="ai" />
-                  <Button
-                    type="button"
-                    className="h-8 rounded-[10px] bg-[#EF4444] px-3 text-[13px] text-white hover:bg-[#DC2626]"
-                  >
-                    <CircleStop className="size-3.5" aria-hidden="true" />
-                    Interrupt
-                  </Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <StatusBadge
+                    label={
+                      isConversationComplete
+                        ? "Negotiation Complete"
+                        : isNegotiating || isWaitingForAI
+                          ? "Negotiation Active"
+                          : conversation.negotiationState
+                    }
+                    tone={
+                      isConversationComplete
+                        ? "success"
+                        : isNegotiating || isWaitingForAI
+                          ? "ai"
+                          : stateTone[conversation.negotiationState]
+                    }
+                  />
+                  {conversation.submittedOrderId ? (
+                    <StatusBadge
+                      label={`Order ${conversation.submittedOrderStatus ?? "Created"}`}
+                      tone="success"
+                    />
+                  ) : null}
+                  {conversation.linkedInvoiceId ? (
+                    <StatusBadge label="Invoice Received" tone="warning" />
+                  ) : null}
                 </div>
               </div>
             </CardHeader>
 
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-              <div className="shrink-0 border-b border-[#243047] px-5 py-3 text-center text-[13px] font-medium uppercase tracking-wider text-[#6B7280]">
-                PO PDF dispatched to supplier · Z.AI running negotiation loop
-              </div>
-
               {conversation.aiExtraction.supplierLanguage !== "English" ? (
                 <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#243047] bg-[#8B5CF6]/5 px-5 py-2.5">
                   <div className="flex items-center gap-2">
@@ -318,7 +647,7 @@ export function ConversationWorkspace({
               ) : null}
 
               <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
-                {messages.map((message) => {
+                {liveMessages.map((message) => {
                   const invoice = message.invoiceId
                     ? invoicesById[message.invoiceId]
                     : undefined
@@ -335,43 +664,72 @@ export function ConversationWorkspace({
                   )
                 })}
 
-                <div className="ml-8 max-w-[86%] rounded-[14px] border border-[#8B5CF6]/30 bg-[#111827] p-4 shadow-lg shadow-black/10">
-                  <div className="mb-3 flex items-center gap-2">
-                    <StatusBadge label="Z.AI autonomous draft" tone="ai" />
-                    <span className="text-[13px] text-[#9CA3AF]">
-                      auto-send queued
-                    </span>
+                {isWaitingForAI ? (
+                  <div className="ml-8 max-w-[86%] rounded-[14px] border border-[#243047] bg-[#111827] p-3">
+                    <div className="flex items-center gap-2 text-[14px] text-[#9CA3AF]">
+                      <span className="inline-flex size-2 animate-pulse rounded-full bg-[#8B5CF6]" />
+                      <span>typing...</span>
+                    </div>
                   </div>
-                  <p className="text-[15px] leading-6 text-[#E5E7EB]">
-                    We can accept the split delivery only if freight is capped
-                    and the second shipment quantity is confirmed. If volume
-                    increases to the AI recommended bundle, can you meet the
-                    target range of {conversation.targetPriceRange}?
-                  </p>
-                  <div className="mt-4 rounded-[10px] border border-[#243047] bg-[#172033] p-3">
-                    <p className="text-[13px] font-medium text-[#C4B5FD]">
-                      Z.AI automation rationale
-                    </p>
-                    <p className="mt-1 text-[13px] leading-5 text-[#9CA3AF]">
-                      {conversation.nextAction.negotiationSummary}
-                    </p>
-                  </div>
-                  <p className="mt-4 text-[13px] text-[#9CA3AF]">
-                    No approval required. Z.AI continues automatically unless
-                    the operator interrupts.
-                  </p>
+                ) : null}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Supplier Reply Section */}
+              <div className="shrink-0 border-t border-[#243047] bg-[#0B1020] p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-[13px] font-medium text-[#9CA3AF]">Test Supplier Reply</span>
+                  <StatusBadge label="Development Mode" tone="warning" />
+                </div>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={supplierReply}
+                    onChange={(e) => setSupplierReply(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendSupplierReply()}
+                    placeholder="Enter supplier's counter-offer or response..."
+                    className="flex-1 rounded-[10px] border border-[#243047] bg-[#172033] px-3 py-2 text-[14px] text-[#E5E7EB] outline-none placeholder:text-[#6B7280] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
+                    disabled={isSendingReply || isConversationComplete}
+                  />
+                  <Button
+                    onClick={handleSendSupplierReply}
+                    disabled={isSendingReply || isConversationComplete || !supplierReply.trim()}
+                    className="h-9 rounded-[10px] bg-[#3B82F6] px-4 text-[13px] text-white hover:bg-[#2563EB] disabled:opacity-50"
+                  >
+                    {isSendingReply ? "Sending..." : "Send Reply"}
+                  </Button>
                 </div>
               </div>
 
               <div className="shrink-0 border-t border-[#243047] bg-[#0B1020] p-4">
-                <textarea
-                  className="mb-3 min-h-[72px] w-full resize-none rounded-[10px] border border-[#243047] bg-[#172033] p-3 text-[15px] text-[#E5E7EB] outline-none placeholder:text-[#6B7280] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                  placeholder="Optional operator note. Use Interrupt to stop Z.AI before it sends."
+                <input
+                  ref={imageUploadInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    void handleSendSupplierFile(file)
+                    event.currentTarget.value = ""
+                  }}
+                />
+                <input
+                  ref={pdfUploadInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    void handleSendSupplierFile(file)
+                    event.currentTarget.value = ""
+                  }}
                 />
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
+                      onClick={() => imageUploadInputRef.current?.click()}
+                      disabled={isSendingReply || isConversationComplete}
                       className="h-9 rounded-[10px] border-[#243047] bg-[#172033] text-[#E5E7EB] hover:bg-[#243047]"
                     >
                       <ImageIcon className="size-4" aria-hidden="true" />
@@ -379,26 +737,12 @@ export function ConversationWorkspace({
                     </Button>
                     <Button
                       variant="outline"
+                      onClick={() => pdfUploadInputRef.current?.click()}
+                      disabled={isSendingReply || isConversationComplete}
                       className="h-9 rounded-[10px] border-[#243047] bg-[#172033] text-[#E5E7EB] hover:bg-[#243047]"
                     >
                       <FileText className="size-4" aria-hidden="true" />
                       PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-9 rounded-[10px] border-[#243047] bg-[#172033] text-[#E5E7EB] hover:bg-[#243047]"
-                    >
-                      <Mic className="size-4" aria-hidden="true" />
-                      Voice
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button className="h-10 rounded-[10px] bg-[#172033] px-4 text-[#E5E7EB] hover:bg-[#243047]">
-                      View Z.AI Analysis
-                    </Button>
-                    <Button className="h-10 rounded-[10px] bg-[#EF4444] px-4 text-white hover:bg-[#DC2626]">
-                      <CircleStop className="size-4" aria-hidden="true" />
-                      Interrupt & Take Over
                     </Button>
                   </div>
                 </div>
@@ -406,134 +750,6 @@ export function ConversationWorkspace({
             </CardContent>
           </Card>
         </main>
-
-        <aside className="space-y-4">
-          <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
-            <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
-                AI Extraction Panel
-              </CardTitle>
-              <p className="mt-1 text-[13px] text-[#9CA3AF]">
-                Hover a field to highlight the source message Z.AI parsed it
-                from.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4">
-              <HoverableField
-                label="Extracted Price"
-                value={conversation.aiExtraction.extractedPrice}
-                onHover={() => handleFieldHover("extractedPrice")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Extracted Quantity"
-                value={conversation.aiExtraction.extractedQuantity}
-                onHover={() => handleFieldHover("extractedQuantity")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Delivery Estimate"
-                value={conversation.aiExtraction.deliveryEstimate}
-                onHover={() => handleFieldHover("deliveryEstimate")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Supplier Language"
-                value={conversation.aiExtraction.supplierLanguage}
-                onHover={() => handleFieldHover("supplierLanguage")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <HoverableField
-                label="Detected Intent"
-                value={conversation.aiExtraction.detectedIntent}
-                onHover={() => handleFieldHover("detectedIntent")}
-                onLeave={() => handleFieldHover(null)}
-              />
-              <div
-                onMouseEnter={() => handleFieldHover("missingFields")}
-                onMouseLeave={() => handleFieldHover(null)}
-                className="rounded-[10px] p-2 -m-2 transition-colors hover:bg-[#172033]/60"
-              >
-                <p className="text-[13px] text-[#9CA3AF]">Missing Fields</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {conversation.aiExtraction.missingFields.length > 0 ? (
-                    conversation.aiExtraction.missingFields.map((field) => (
-                      <StatusBadge key={field} label={field} tone="warning" />
-                    ))
-                  ) : (
-                    <StatusBadge label="None" tone="success" />
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[13px] text-[#9CA3AF]">
-                    Confidence Score
-                  </span>
-                  <span className="text-[15px] font-semibold text-[#E5E7EB]">
-                    {conversation.aiExtraction.confidenceScore}%
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-[#172033]">
-                  <div
-                    className="h-2 rounded-full bg-[#8B5CF6]"
-                    style={{
-                      width: `${conversation.aiExtraction.confidenceScore}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <AiReasoningTrail
-                id={`conv-extract-${conversation.id}`}
-                signals={reasoning.signals}
-                confidence={reasoning.confidence}
-                decision={reasoning.decision}
-                density="compact"
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
-            <CardHeader className="border-b border-[#243047] p-4">
-              <CardTitle className="text-[18px] font-semibold text-[#E5E7EB]">
-                Next Action Panel
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-4">
-              <div className="rounded-[14px] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 p-4">
-                <p className="text-[13px] font-medium text-[#C4B5FD]">
-                  Recommended next step
-                </p>
-                <p className="mt-2 text-[15px] leading-6 text-[#E5E7EB]">
-                  {conversation.nextAction.recommendedNextStep}
-                </p>
-              </div>
-              <InfoRow
-                label="Negotiation Summary"
-                value={conversation.nextAction.negotiationSummary}
-              />
-              <div>
-                <p className="text-[13px] text-[#9CA3AF]">
-                  Linked Invoice Status
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  <StatusBadge
-                    label={conversation.nextAction.linkedInvoiceStatus}
-                    tone="warning"
-                  />
-                  {linkedInvoice ? (
-                    <Link
-                      href={`/invoice-management/${linkedInvoice.id}`}
-                      className="text-[13px] font-medium text-[#3B82F6] hover:text-[#93C5FD]"
-                    >
-                      Open invoice
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
       </section>
 
       <EvidenceSheet
@@ -603,6 +819,7 @@ function MessageBubble({
 }) {
   const isSupplier = message.type === "supplier-message"
   const isMerchant = message.type === "merchant-action"
+  const { thinking, visible } = splitThinking(message.body)
 
   return (
     <motion.div
@@ -658,18 +875,31 @@ function MessageBubble({
             {message.author} / {message.sentiment}
           </span>
         </div>
-        <p
-          className="text-[15px] leading-6 text-[#E5E7EB]"
-          lang={
-            message.language === "ZH"
-              ? "zh"
-              : message.language === "JA"
-                ? "ja"
-                : undefined
-          }
-        >
-          {message.body}
-        </p>
+        {visible ? (
+          <p
+            className="text-[15px] leading-6 text-[#E5E7EB]"
+            lang={
+              message.language === "ZH"
+                ? "zh"
+                : message.language === "JA"
+                  ? "ja"
+                  : undefined
+            }
+          >
+            {visible}
+          </p>
+        ) : null}
+
+        {thinking ? (
+          <details className="mt-3 rounded-[10px] border border-[#243047] bg-[#0B1220] p-3">
+            <summary className="cursor-pointer select-none text-[13px] font-medium text-[#9CA3AF]">
+              AI Reasoning
+            </summary>
+            <pre className="mt-2 whitespace-pre-wrap text-[13px] leading-5 text-[#E5E7EB]">
+              {thinking}
+            </pre>
+          </details>
+        ) : null}
         {message.translation ? (
           <div className="mt-3 rounded-[10px] border border-dashed border-[#8B5CF6]/30 bg-[#8B5CF6]/5 p-3">
             <div className="mb-1 flex items-center gap-1.5 text-[13px] font-medium uppercase tracking-wider text-[#C4B5FD]">
@@ -686,13 +916,15 @@ function MessageBubble({
             invoice={invoice}
             attachmentType={message.attachmentType}
             attachmentLabel={message.attachmentLabel}
+            fileUrl={fileUrlFor(message)}
             onClick={onAttachmentClick}
           />
         ) : message.attachmentType ? (
-          <AttachmentPreview
+            <AttachmentPreview
             type={message.attachmentType}
             label={message.attachmentLabel ?? "Attachment"}
             orderSummary={message.orderSummary}
+            fileUrl={fileUrlFor(message)}
             inlinePdfExpanded={inlinePdfExpanded}
             onClick={onAttachmentClick}
           />
@@ -711,11 +943,13 @@ function SupplierInvoiceFrame({
   invoice,
   attachmentType,
   attachmentLabel,
+  fileUrl,
   onClick,
 }: {
   invoice: Invoice
   attachmentType?: NegotiationMessage["attachmentType"]
   attachmentLabel?: string
+  fileUrl?: string
   onClick: () => void
 }) {
   const isImage = attachmentType === "image"
@@ -759,12 +993,12 @@ function SupplierInvoiceFrame({
       >
         <div
           className={cn(
-            "flex size-12 shrink-0 items-center justify-center rounded-[10px]",
-            isImage ? "bg-[#172033]" : "bg-[#F59E0B]/10 text-[#FBBF24]"
+            "flex size-12 shrink-0 items-center justify-center rounded-[10px] overflow-hidden bg-[#172033]",
+            !fileUrl && "bg-[#F59E0B]/10 text-[#FBBF24]"
           )}
         >
-          {isImage ? (
-            <div className="h-full w-full rounded-[10px] bg-[linear-gradient(135deg,#172033,#111827_45%,#243047)]" />
+          {fileUrl && isImage ? (
+            <img src={fileUrl} alt="Thumbnail" className="w-full h-full object-cover" />
           ) : (
             <AttachmentIcon className="size-5" aria-hidden="true" />
           )}
@@ -848,12 +1082,14 @@ function AttachmentPreview({
   type,
   label,
   orderSummary,
+  fileUrl,
   inlinePdfExpanded,
   onClick,
 }: {
   type: NonNullable<NegotiationMessage["attachmentType"]>
   label: string
   orderSummary?: OrderSummary
+  fileUrl?: string
   inlinePdfExpanded: boolean
   onClick: () => void
 }) {
@@ -908,9 +1144,13 @@ function AttachmentPreview({
         <button
           type="button"
           onClick={onClick}
-          className="block h-24 w-full border-t border-[#243047] bg-[linear-gradient(135deg,#172033,#111827_45%,#243047)] transition-opacity hover:opacity-90"
+          className="block h-36 w-full border-t border-[#243047] bg-[linear-gradient(135deg,#172033,#111827_45%,#243047)] transition-opacity hover:opacity-90 overflow-hidden relative"
           aria-label={`Preview ${label}`}
-        />
+        >
+          {fileUrl && (
+             <img src={fileUrl} alt={label} className="w-full h-full object-cover" />
+          )}
+        </button>
       ) : null}
       {type === "voice" ? (
         <button
@@ -1074,6 +1314,7 @@ function EvidenceBody({
 }) {
   const { message, invoice } = preview
   const type = message.attachmentType
+  const fileUrl = fileUrlFor(message)
 
   const title = invoice
     ? `Invoice · ${invoice.invoiceNumber}`
@@ -1094,15 +1335,23 @@ function EvidenceBody({
       </SheetHeader>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-6 pt-4">
+        {fileUrl && (type === "image" || type === "screenshot") ? (
+          <ImagePreviewBody message={message} />
+        ) : null}
+
+        {fileUrl && type === "pdf" ? (
+          <PdfPreviewBody message={message} />
+        ) : null}
+
         {invoice ? (
           <InvoiceDocumentPreview invoice={invoice} supplier={supplier} />
         ) : null}
 
-        {!invoice && (type === "image" || type === "screenshot") ? (
+        {!fileUrl && (type === "image" || type === "screenshot") ? (
           <ImagePreviewBody message={message} />
         ) : null}
 
-        {!invoice && type === "pdf" ? (
+        {!fileUrl && type === "pdf" && !invoice ? (
           <PdfPreviewBody message={message} />
         ) : null}
 
@@ -1142,53 +1391,72 @@ function EvidenceMetaCard({ message }: { message: NegotiationMessage }) {
 }
 
 function ImagePreviewBody({ message }: { message: NegotiationMessage }) {
+  const fileUrl = fileUrlFor(message)
+
   return (
     <div className="rounded-[12px] border border-[#243047] bg-[#0F1728] p-4">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-[10px] border border-[#243047] bg-[linear-gradient(135deg,#172033,#111827_40%,#243047_80%,#1F2A44)]">
-        <div className="absolute inset-x-4 top-4 flex items-center justify-between text-[13px] text-[#94A3B8]">
-          <span>{message.attachmentLabel}</span>
-          <span className="font-mono">JPG · 1.2 MB</span>
-        </div>
-        <div className="absolute inset-x-6 bottom-5 flex flex-col gap-2">
-          <span className="h-3 w-2/3 rounded bg-[#334155]/60" />
-          <span className="h-3 w-1/2 rounded bg-[#334155]/60" />
-          <span className="h-3 w-3/4 rounded bg-[#334155]/60" />
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[10px] border border-[#243047] bg-[linear-gradient(135deg,#172033,#111827_40%,#243047_80%,#1F2A44)] flex items-center justify-center">
+        {fileUrl ? (
+           <img src={fileUrl} alt={message.attachmentLabel || "Preview"} className="w-full h-full object-contain bg-black/40" />
+        ) : (
+          <div className="absolute inset-x-6 bottom-5 flex flex-col gap-2">
+            <span className="h-3 w-2/3 rounded bg-[#334155]/60" />
+            <span className="h-3 w-1/2 rounded bg-[#334155]/60" />
+            <span className="h-3 w-3/4 rounded bg-[#334155]/60" />
+          </div>
+        )}
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-4 top-4 flex items-center justify-between text-[13px] text-white z-10 font-medium drop-shadow-md">
+          <span className="truncate max-w-[70%]">{message.attachmentLabel || "Image Attachment"}</span>
+          <span className="font-mono bg-black/40 px-2 py-1 rounded">IMAGE</span>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 text-[13px] text-[#9CA3AF]">
-        <span>Auto-detected: hand-written route board</span>
-        <span>OCR confidence: 84%</span>
+        <span>Auto-detected: Document metadata</span>
+        <span>Confidence: High</span>
       </div>
     </div>
   )
 }
 
 function PdfPreviewBody({ message }: { message: NegotiationMessage }) {
+  const fileUrl = fileUrlFor(message)
+
   return (
     <div className="rounded-[12px] border border-[#243047] bg-[#0F1728] p-4">
-      <div className="space-y-3">
-        {[0, 1].map((index) => (
-          <div
-            key={index}
-            className="rounded-[10px] border border-[#243047] bg-[#F8FAFC] p-5 text-[#111827]"
-          >
-            <div className="mb-4 flex items-center justify-between border-b border-[#CBD5E1] pb-2">
-              <span className="text-[13px] font-semibold uppercase tracking-wider">
-                {message.attachmentLabel ?? "Document"} · page {index + 1}
-              </span>
-              <span className="text-[12px] text-[#64748B]">A4</span>
+      {fileUrl ? (
+        <div className="w-full aspect-[1/1.414] rounded-[10px] overflow-hidden border border-[#243047] bg-white">
+          <iframe
+            src={`${fileUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+            className="w-full h-full border-none"
+            title="PDF Preview"
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {[0, 1].map((index) => (
+            <div
+              key={index}
+              className="rounded-[10px] border border-[#243047] bg-[#F8FAFC] p-5 text-[#111827]"
+            >
+              <div className="mb-4 flex items-center justify-between border-b border-[#CBD5E1] pb-2">
+                <span className="text-[13px] font-semibold uppercase tracking-wider">
+                  {message.attachmentLabel ?? "Document"} · page {index + 1}
+                </span>
+                <span className="text-[12px] text-[#64748B]">A4</span>
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-3/4 rounded bg-[#CBD5E1]" />
+                <div className="h-3 w-2/3 rounded bg-[#CBD5E1]" />
+                <div className="h-3 w-5/6 rounded bg-[#CBD5E1]" />
+                <div className="h-3 w-1/2 rounded bg-[#CBD5E1]" />
+                <div className="mt-4 h-3 w-1/3 rounded bg-[#CBD5E1]" />
+                <div className="h-3 w-4/5 rounded bg-[#CBD5E1]" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <div className="h-3 w-3/4 rounded bg-[#CBD5E1]" />
-              <div className="h-3 w-2/3 rounded bg-[#CBD5E1]" />
-              <div className="h-3 w-5/6 rounded bg-[#CBD5E1]" />
-              <div className="h-3 w-1/2 rounded bg-[#CBD5E1]" />
-              <div className="mt-4 h-3 w-1/3 rounded bg-[#CBD5E1]" />
-              <div className="h-3 w-4/5 rounded bg-[#CBD5E1]" />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

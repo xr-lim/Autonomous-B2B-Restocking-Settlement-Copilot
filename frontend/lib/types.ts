@@ -4,6 +4,7 @@ export type StatusTone = "default" | "success" | "warning" | "danger" | "ai"
 
 export type NavigationItem = {
   title: string
+  shortTitle?: string
   href: string
   icon: LucideIcon
 }
@@ -31,9 +32,7 @@ export type Product = {
   name: string
   category: string
   stockOnHand: number
-  reorderPoint: number
-  staticThreshold: number
-  aiThreshold: number
+  currentThreshold: number
   unitCost: number
   maxStockAmount: number
   forecastDemand: number
@@ -66,6 +65,22 @@ export type ThresholdChangeRequest = {
     | "new-product"
 }
 
+export type RestockRequest = {
+  id: string
+  productSku: string
+  productName: string
+  workflowId?: string
+  targetPriceMin?: number
+  targetPriceMax?: number
+  requestedThreshold?: number
+  requestedQuantity?: number
+  reason: string
+  status: "pending" | "reviewed" | "accepted" | "rejected" | "cancelled"
+  requestedBy: "ai" | "merchant" | "system"
+  createdAt: string
+  updatedAt: string
+}
+
 export type Workflow = {
   id: string
   title: string
@@ -80,6 +95,18 @@ export type Workflow = {
   owner: string
   updatedAt: string
 }
+
+export type WorkflowState =
+  | "stock_healthy"
+  | "threshold_review"
+  | "supplier_prep"
+  | "po_sent"
+  | "waiting_supplier"
+  | "invoice_processing"
+  | "ready_for_approval"
+  | "completed"
+  | "escalated"
+  | "blocked"
 
 export type Supplier = {
   id: string
@@ -133,8 +160,9 @@ export type NegotiationMessage = {
 
 export type ConversationSource =
   | "Email"
-  | "Chat App"
-  | "Upload"
+  | "WhatsApp"
+  | "Telegram"
+  | "WeChat"
   | "PDF"
   | "Image"
   | "Voice Note"
@@ -153,6 +181,10 @@ export type Conversation = {
   productSku: string
   linkedSkus: string[]
   supplierId: string
+  workflowId?: string
+  submittedOrderId?: string
+  submittedOrderStatus?: string
+  linkedInvoiceId?: string
   subject: string
   source: ConversationSource
   negotiationState: NegotiationState
@@ -184,6 +216,9 @@ export type Invoice = {
   productSku: string
   linkedSkus: string[]
   workflowId: string
+  workflowState?: string
+  orderId?: string
+  orderStatus?: string
   invoiceNumber: string
   amount: number
   negotiatedAmount: number
@@ -191,7 +226,7 @@ export type Invoice = {
   invoiceQuantity: number
   unitPrice: number
   subtotal: number
-  currency: "USD" | "MYR" | "SGD"
+  currency: string
   risk: "low risk" | "waiting approval" | "needs review" | "blocked"
   riskLevel: "Low Risk" | "Medium Risk" | "High Risk"
   riskReason: string
@@ -202,11 +237,21 @@ export type Invoice = {
     | "Missing Information"
   approvalState: "Waiting Approval" | "Needs Review" | "Blocked" | "Completed"
   sourceType: "PDF" | "Image" | "Email Attachment" | "Upload"
+  fileUrl?: string | null
   fileName: string
   fileSize: string
   bankDetails: string
   paymentTerms: string
+  extractedText?: string
+  processingStatus?: "idle" | "extracting" | "analyzing"
+  issueSummaries: string[]
   riskConfidence: number
+  expectedAmountLabel?: string
+  expectedCurrency?: string
+  expectedSupplierName?: string
+  expectedBankDetails?: string
+  expectedPaymentTerms?: string
+  aiLastAnalyzedAt?: string
   flags: {
     bankDetailsIssue: boolean
     amountMismatch: boolean
@@ -246,11 +291,16 @@ export type TimelineEvent = {
 export type RestockRecommendation = {
   id: string
   sku: string
+  workflowId?: string
+  workflowState?: WorkflowState
+  workflowBlockedStepIndex?: number
+  restockRequestId?: string
+  restockRequestStatus?: RestockRequest["status"]
   productName: string
   supplier: string
   reason: string
   currentStock: number
-  aiThreshold: number
+  currentThreshold: number
   targetPrice: string
   quantity: number
   estimatedSpend: string

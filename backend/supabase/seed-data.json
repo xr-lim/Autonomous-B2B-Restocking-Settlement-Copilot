@@ -1,0 +1,317 @@
+{
+  "suppliers": [
+    {
+      "id": "sup-my-001",
+      "name": "Seri Murni Grocer Supplies Sdn Bhd",
+      "region": "Shah Alam, Selangor",
+      "lead_time_days": 3,
+      "reliability_score": 94,
+      "status": "preferred",
+      "moq": 40,
+      "notes": "Bank: Maybank | Account No: 514277881034",
+      "created_at": "2026-04-21T01:00:00.000Z",
+      "updated_at": "2026-04-25T03:40:00.000Z"
+    },
+    {
+      "id": "sup-my-002",
+      "name": "Cemerlang Beverage Distribution Sdn Bhd",
+      "region": "Subang Jaya, Selangor",
+      "lead_time_days": 2,
+      "reliability_score": 92,
+      "status": "preferred",
+      "moq": 60,
+      "notes": "Bank: CIMB Bank | Account No: 800744129056",
+      "created_at": "2026-04-21T01:10:00.000Z",
+      "updated_at": "2026-04-25T03:20:00.000Z"
+    },
+    {
+      "id": "sup-my-003",
+      "name": "Utara Household Trading Sdn Bhd",
+      "region": "Butterworth, Pulau Pinang",
+      "lead_time_days": 4,
+      "reliability_score": 89,
+      "status": "watchlist",
+      "moq": 30,
+      "notes": "Bank: RHB Bank | Account No: 211005667821",
+      "created_at": "2026-04-21T01:20:00.000Z",
+      "updated_at": "2026-04-25T03:00:00.000Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "prd-my-001",
+      "sku": "SKU-MLO-30P",
+      "name": "Milo 3-in-1 Sachets 30 Pack",
+      "category": "Beverages",
+      "current_stock": 42,
+      "unit_price": 18.9,
+      "current_threshold": 60,
+      "max_capacity": 180,
+      "status": "below_threshold",
+      "primary_supplier_id": "sup-my-001",
+      "created_at": "2026-04-21T02:00:00.000Z",
+      "updated_at": "2026-04-25T05:10:00.000Z"
+    },
+    {
+      "id": "prd-my-002",
+      "sku": "SKU-MGG-5PK",
+      "name": "Maggi Curry Instant Noodles 5 Pack",
+      "category": "Dry Grocery",
+      "current_stock": 95,
+      "unit_price": 9.4,
+      "current_threshold": 80,
+      "max_capacity": 240,
+      "status": "healthy",
+      "primary_supplier_id": "sup-my-001",
+      "created_at": "2026-04-21T02:05:00.000Z",
+      "updated_at": "2026-04-25T05:12:00.000Z"
+    },
+    {
+      "id": "prd-my-003",
+      "sku": "SKU-SPR-24C",
+      "name": "Spritzer Mineral Water 500ml 24 Bottle Carton",
+      "category": "Beverages",
+      "current_stock": 36,
+      "unit_price": 14.8,
+      "current_threshold": 50,
+      "max_capacity": 160,
+      "status": "below_threshold",
+      "primary_supplier_id": "sup-my-002",
+      "created_at": "2026-04-21T02:10:00.000Z",
+      "updated_at": "2026-04-25T05:14:00.000Z"
+    },
+    {
+      "id": "prd-my-004",
+      "sku": "SKU-OIL-2KG",
+      "name": "Knife Cooking Oil 2kg Pouch",
+      "category": "Household Staples",
+      "current_stock": 24,
+      "unit_price": 17.6,
+      "current_threshold": 35,
+      "max_capacity": 120,
+      "status": "below_threshold",
+      "primary_supplier_id": "sup-my-003",
+      "created_at": "2026-04-21T02:15:00.000Z",
+      "updated_at": "2026-04-25T05:16:00.000Z"
+    }
+  ],
+  "product_suppliers": [
+    {
+      "id": "ps-my-001",
+      "product_id": "prd-my-001",
+      "supplier_id": "sup-my-001",
+      "is_primary": true,
+      "created_at": "2026-04-21T02:30:00.000Z"
+    },
+    {
+      "id": "ps-my-002",
+      "product_id": "prd-my-002",
+      "supplier_id": "sup-my-001",
+      "is_primary": true,
+      "created_at": "2026-04-21T02:31:00.000Z"
+    },
+    {
+      "id": "ps-my-003",
+      "product_id": "prd-my-003",
+      "supplier_id": "sup-my-002",
+      "is_primary": true,
+      "created_at": "2026-04-21T02:32:00.000Z"
+    },
+    {
+      "id": "ps-my-004",
+      "product_id": "prd-my-004",
+      "supplier_id": "sup-my-003",
+      "is_primary": true,
+      "created_at": "2026-04-21T02:33:00.000Z"
+    }
+  ],
+  "threshold_change_requests": [],
+  "conversations": [],
+  "conversation_products": [],
+  "conversation_messages": [],
+  "workflows": [],
+  "restock_requests": [],
+  "workflow_events": [],
+  "invoices": [],
+  "invoice_products": [],
+  "invoice_validation_results": [],
+  "invoice_actions": [],
+  "product_stock_demand_trends": [
+    {
+      "id": "tr-my-001",
+      "product_id": "prd-my-001",
+      "month_order": 1,
+      "month": "Jan",
+      "stock": 92,
+      "demand": 38,
+      "promotion": "Back-to-school demand",
+      "created_at": "2026-04-21T03:00:00.000Z",
+      "updated_at": "2026-04-21T03:00:00.000Z"
+    },
+    {
+      "id": "tr-my-002",
+      "product_id": "prd-my-001",
+      "month_order": 2,
+      "month": "Feb",
+      "stock": 78,
+      "demand": 44,
+      "promotion": "Payday bundle uplift",
+      "created_at": "2026-04-21T03:01:00.000Z",
+      "updated_at": "2026-04-21T03:01:00.000Z"
+    },
+    {
+      "id": "tr-my-003",
+      "product_id": "prd-my-001",
+      "month_order": 3,
+      "month": "Mar",
+      "stock": 61,
+      "demand": 52,
+      "promotion": "Ramadan pantry demand",
+      "created_at": "2026-04-21T03:02:00.000Z",
+      "updated_at": "2026-04-21T03:02:00.000Z"
+    },
+    {
+      "id": "tr-my-004",
+      "product_id": "prd-my-001",
+      "month_order": 4,
+      "month": "Apr",
+      "stock": 42,
+      "demand": 58,
+      "promotion": "Hari Raya restock demand",
+      "created_at": "2026-04-21T03:03:00.000Z",
+      "updated_at": "2026-04-21T03:03:00.000Z"
+    },
+    {
+      "id": "tr-my-005",
+      "product_id": "prd-my-002",
+      "month_order": 1,
+      "month": "Jan",
+      "stock": 118,
+      "demand": 34,
+      "promotion": "Baseline grocery demand",
+      "created_at": "2026-04-21T03:04:00.000Z",
+      "updated_at": "2026-04-21T03:04:00.000Z"
+    },
+    {
+      "id": "tr-my-006",
+      "product_id": "prd-my-002",
+      "month_order": 2,
+      "month": "Feb",
+      "stock": 112,
+      "demand": 36,
+      "promotion": "Weekend family basket",
+      "created_at": "2026-04-21T03:05:00.000Z",
+      "updated_at": "2026-04-21T03:05:00.000Z"
+    },
+    {
+      "id": "tr-my-007",
+      "product_id": "prd-my-002",
+      "month_order": 3,
+      "month": "Mar",
+      "stock": 104,
+      "demand": 39,
+      "promotion": "Ramadan pantry uplift",
+      "created_at": "2026-04-21T03:06:00.000Z",
+      "updated_at": "2026-04-21T03:06:00.000Z"
+    },
+    {
+      "id": "tr-my-008",
+      "product_id": "prd-my-002",
+      "month_order": 4,
+      "month": "Apr",
+      "stock": 95,
+      "demand": 37,
+      "promotion": "Stable weekly sell-through",
+      "created_at": "2026-04-21T03:07:00.000Z",
+      "updated_at": "2026-04-21T03:07:00.000Z"
+    },
+    {
+      "id": "tr-my-009",
+      "product_id": "prd-my-003",
+      "month_order": 1,
+      "month": "Jan",
+      "stock": 84,
+      "demand": 26,
+      "promotion": "Office pantry baseline",
+      "created_at": "2026-04-21T03:08:00.000Z",
+      "updated_at": "2026-04-21T03:08:00.000Z"
+    },
+    {
+      "id": "tr-my-010",
+      "product_id": "prd-my-003",
+      "month_order": 2,
+      "month": "Feb",
+      "stock": 71,
+      "demand": 31,
+      "promotion": "Hot weather pickup",
+      "created_at": "2026-04-21T03:09:00.000Z",
+      "updated_at": "2026-04-21T03:09:00.000Z"
+    },
+    {
+      "id": "tr-my-011",
+      "product_id": "prd-my-003",
+      "month_order": 3,
+      "month": "Mar",
+      "stock": 54,
+      "demand": 37,
+      "promotion": "Buka puasa event demand",
+      "created_at": "2026-04-21T03:10:00.000Z",
+      "updated_at": "2026-04-21T03:10:00.000Z"
+    },
+    {
+      "id": "tr-my-012",
+      "product_id": "prd-my-003",
+      "month_order": 4,
+      "month": "Apr",
+      "stock": 36,
+      "demand": 41,
+      "promotion": "Festive travel demand",
+      "created_at": "2026-04-21T03:11:00.000Z",
+      "updated_at": "2026-04-21T03:11:00.000Z"
+    },
+    {
+      "id": "tr-my-013",
+      "product_id": "prd-my-004",
+      "month_order": 1,
+      "month": "Jan",
+      "stock": 58,
+      "demand": 18,
+      "promotion": "Household essentials baseline",
+      "created_at": "2026-04-21T03:12:00.000Z",
+      "updated_at": "2026-04-21T03:12:00.000Z"
+    },
+    {
+      "id": "tr-my-014",
+      "product_id": "prd-my-004",
+      "month_order": 2,
+      "month": "Feb",
+      "stock": 47,
+      "demand": 22,
+      "promotion": "Monthly pantry top-up",
+      "created_at": "2026-04-21T03:13:00.000Z",
+      "updated_at": "2026-04-21T03:13:00.000Z"
+    },
+    {
+      "id": "tr-my-015",
+      "product_id": "prd-my-004",
+      "month_order": 3,
+      "month": "Mar",
+      "stock": 34,
+      "demand": 27,
+      "promotion": "Festive cooking demand",
+      "created_at": "2026-04-21T03:14:00.000Z",
+      "updated_at": "2026-04-21T03:14:00.000Z"
+    },
+    {
+      "id": "tr-my-016",
+      "product_id": "prd-my-004",
+      "month_order": 4,
+      "month": "Apr",
+      "stock": 24,
+      "demand": 29,
+      "promotion": "Raya cooking essentials",
+      "created_at": "2026-04-21T03:15:00.000Z",
+      "updated_at": "2026-04-21T03:15:00.000Z"
+    }
+  ]
+}

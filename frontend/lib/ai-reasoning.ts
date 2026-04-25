@@ -80,12 +80,12 @@ export function buildThresholdReasoning(
   }
 
   if (product) {
-    if (product.stockOnHand < product.aiThreshold) {
-      const gap = product.aiThreshold - product.stockOnHand
+    if (product.stockOnHand < product.currentThreshold) {
+      const gap = product.currentThreshold - product.stockOnHand
       signals.push({
         kind: "stockout",
         label: "Stockout risk present",
-        detail: `Current stock ${product.stockOnHand} sits ${gap} units under the existing AI threshold.`,
+        detail: `Current stock ${product.stockOnHand} sits ${gap} units under the current threshold.`,
         tone: "risk",
       })
     }
@@ -325,12 +325,12 @@ export function buildConversationReasoning(
   }
 
   products.forEach((product) => {
-    if (product.stockOnHand < product.aiThreshold) {
-      const gap = product.aiThreshold - product.stockOnHand
+    if (product.stockOnHand < product.currentThreshold) {
+      const gap = product.currentThreshold - product.stockOnHand
       signals.push({
         kind: "stockout",
         label: `${product.name} ${gap} units below threshold`,
-        detail: `Stock on hand ${product.stockOnHand} / AI threshold ${product.aiThreshold}. Stockout risk feeds urgency score.`,
+        detail: `Stock on hand ${product.stockOnHand} / current threshold ${product.currentThreshold}. Stockout risk feeds urgency score.`,
         tone: "risk",
       })
     }

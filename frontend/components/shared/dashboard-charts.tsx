@@ -17,7 +17,25 @@ import {
 } from "recharts"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { monthlyDemandData, stockTrendData } from "@/lib/mock-data"
+
+type StockTrendPoint = {
+  date: string
+  primaryLabel: string
+  primaryStock: number
+  primaryThreshold: number
+  secondaryLabel: string
+  secondaryStock: number
+  secondaryThreshold: number
+  tertiaryLabel: string
+  tertiaryStock: number
+  tertiaryThreshold: number
+}
+
+type MonthlyDemandPoint = {
+  month: string
+  demand: number
+  promo: string
+}
 
 function ChartCard({
   title,
@@ -31,14 +49,14 @@ function ChartCard({
   footer?: ReactNode
 }) {
   return (
-    <Card className="rounded-[14px] border border-[#243047] bg-[#111827] py-0 shadow-none ring-0">
+    <Card className="panel-surface rounded-3xl py-0">
       <CardHeader className="border-b border-[#243047] p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-[17px] font-semibold text-[#E5E7EB]">
+            <CardTitle className="text-[18px] font-semibold text-[#F8FAFC]">
               {title}
             </CardTitle>
-            <p className="mt-1.5 text-[14px] leading-6 text-[#9CA3AF]">
+            <p className="mt-1.5 text-[14px] leading-6 text-[#94A3B8]">
               {description}
             </p>
           </div>
@@ -87,37 +105,6 @@ const tooltipItemStyle = {
   color: "#E5E7EB",
 }
 
-const latestStock = stockTrendData[stockTrendData.length - 1]
-const stockHighlights = [
-  {
-    label: "Protein Bars",
-    stock: latestStock.proteinBars,
-    threshold: latestStock.proteinThreshold,
-    color: "#3B82F6",
-  },
-  {
-    label: "Cold Brew",
-    stock: latestStock.coldBrew,
-    threshold: latestStock.coldBrewThreshold,
-    color: "#10B981",
-  },
-  {
-    label: "Jasmine Rice",
-    stock: latestStock.rice,
-    threshold: latestStock.riceThreshold,
-    color: "#F59E0B",
-  },
-]
-
-const totalDemand = monthlyDemandData.reduce(
-  (total, item) => total + item.demand,
-  0
-)
-const peakDemand = monthlyDemandData.reduce((peak, item) =>
-  item.demand > peak.demand ? item : peak
-)
-const promoMonths = monthlyDemandData.filter((item) => item.promo !== "Baseline")
-
 function subscribeToClientStore() {
   return () => {}
 }
@@ -130,28 +117,97 @@ function getServerSnapshot() {
   return false
 }
 
-export function DashboardCharts() {
+export function DashboardCharts({
+  monthlyDemandData,
+  stockTrendData,
+  hideMonthlyDemand = false,
+}: {
+  monthlyDemandData: MonthlyDemandPoint[]
+  stockTrendData: StockTrendPoint[]
+  hideMonthlyDemand?: boolean
+}) {
   const mounted = useSyncExternalStore(
     subscribeToClientStore,
     getClientSnapshot,
     getServerSnapshot
   )
 
+  if (stockTrendData.length === 0 || (!hideMonthlyDemand && monthlyDemandData.length === 0)) {
+    return (
+      <section className="grid gap-6">
+        <ChartCard
+          title="Stock Trend Overview"
+          description="Current stock and threshold movement for priority SKUs."
+        >
+          <ChartPlaceholder />
+        </ChartCard>
+        {!hideMonthlyDemand ? (
+          <ChartCard
+            title="Monthly Demand Analytics"
+            description="Demand pattern with promotion months highlighted for planning."
+          >
+            <ChartPlaceholder />
+          </ChartCard>
+        ) : null}
+      </section>
+    )
+  }
+
+  const latestStock = stockTrendData[stockTrendData.length - 1]
+  const stockHighlights = [
+    {
+      label: latestStock.primaryLabel,
+      stock: latestStock.primaryStock,
+      threshold: latestStock.primaryThreshold,
+      color: "#3B82F6",
+      thresholdLabel: `${latestStock.primaryLabel} Threshold`,
+    },
+    {
+      label: latestStock.secondaryLabel,
+      stock: latestStock.secondaryStock,
+      threshold: latestStock.secondaryThreshold,
+      color: "#10B981",
+      thresholdLabel: `${latestStock.secondaryLabel} Threshold`,
+    },
+    {
+      label: latestStock.tertiaryLabel,
+      stock: latestStock.tertiaryStock,
+      threshold: latestStock.tertiaryThreshold,
+      color: "#F59E0B",
+      thresholdLabel: `${latestStock.tertiaryLabel} Threshold`,
+    },
+  ]
+
+  const totalDemand = hideMonthlyDemand
+    ? 0
+    : monthlyDemandData.reduce((total, item) => total + item.demand, 0)
+  const peakDemand =
+    hideMonthlyDemand || monthlyDemandData.length === 0
+      ? null
+      : monthlyDemandData.reduce((peak, item) =>
+          item.demand > peak.demand ? item : peak
+        )
+  const promoMonths = hideMonthlyDemand
+    ? []
+    : monthlyDemandData.filter((item) => item.promo !== "Baseline")
+
   if (!mounted) {
     return (
       <section className="grid gap-6">
         <ChartCard
           title="Stock Trend Overview"
-          description="Current stock and AI threshold movement for priority SKUs."
+          description="Current stock and threshold movement for priority SKUs."
         >
           <ChartPlaceholder />
         </ChartCard>
-        <ChartCard
-          title="Monthly Demand Analytics"
-          description="Demand pattern with promotion months highlighted for planning."
-        >
-          <ChartPlaceholder />
-        </ChartCard>
+        {!hideMonthlyDemand ? (
+          <ChartCard
+            title="Monthly Demand Analytics"
+            description="Demand pattern with promotion months highlighted for planning."
+          >
+            <ChartPlaceholder />
+          </ChartCard>
+        ) : null}
       </section>
     )
   }
@@ -182,7 +238,7 @@ export function DashboardCharts() {
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-[13px]">
                     <Metric label="Stock" value={item.stock.toString()} />
-                    <Metric label="AI threshold" value={item.threshold.toString()} />
+                    <Metric label="Threshold" value={item.threshold.toString()} />
                     <Metric
                       label="Buffer"
                       value={`${gap > 0 ? "+" : ""}${gap}`}
@@ -208,8 +264,8 @@ export function DashboardCharts() {
             <Legend wrapperStyle={{ color: "#9CA3AF", fontSize: 12 }} />
             <Line
               type="monotone"
-              dataKey="proteinBars"
-              name="Protein Bars"
+              dataKey="primaryStock"
+              name={latestStock.primaryLabel}
               stroke="#3B82F6"
               strokeWidth={2.5}
               dot={false}
@@ -217,8 +273,8 @@ export function DashboardCharts() {
             />
             <Line
               type="monotone"
-              dataKey="proteinThreshold"
-              name="Protein AI Threshold"
+              dataKey="primaryThreshold"
+              name={`${latestStock.primaryLabel} Threshold`}
               stroke="#3B82F6"
               strokeDasharray="5 5"
               strokeWidth={1.5}
@@ -226,8 +282,8 @@ export function DashboardCharts() {
             />
             <Line
               type="monotone"
-              dataKey="coldBrew"
-              name="Cold Brew"
+              dataKey="secondaryStock"
+              name={latestStock.secondaryLabel}
               stroke="#10B981"
               strokeWidth={2.5}
               dot={false}
@@ -235,8 +291,8 @@ export function DashboardCharts() {
             />
             <Line
               type="monotone"
-              dataKey="coldBrewThreshold"
-              name="Cold Brew AI Threshold"
+              dataKey="secondaryThreshold"
+              name={`${latestStock.secondaryLabel} Threshold`}
               stroke="#10B981"
               strokeDasharray="5 5"
               strokeWidth={1.5}
@@ -244,8 +300,8 @@ export function DashboardCharts() {
             />
             <Line
               type="monotone"
-              dataKey="rice"
-              name="Jasmine Rice"
+              dataKey="tertiaryStock"
+              name={latestStock.tertiaryLabel}
               stroke="#F59E0B"
               strokeWidth={2.5}
               dot={false}
@@ -253,8 +309,8 @@ export function DashboardCharts() {
             />
             <Line
               type="monotone"
-              dataKey="riceThreshold"
-              name="Rice AI Threshold"
+              dataKey="tertiaryThreshold"
+              name={`${latestStock.tertiaryLabel} Threshold`}
               stroke="#F59E0B"
               strokeDasharray="5 5"
               strokeWidth={1.5}
@@ -264,6 +320,7 @@ export function DashboardCharts() {
         </ResponsiveContainer>
       </ChartCard>
 
+      {!hideMonthlyDemand && peakDemand ? (
       <ChartCard
         title="Monthly Demand Analytics"
         description="Monthly demand with campaign periods highlighted for replenishment timing."
@@ -319,6 +376,7 @@ export function DashboardCharts() {
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
+      ) : null}
     </section>
   )
 }
