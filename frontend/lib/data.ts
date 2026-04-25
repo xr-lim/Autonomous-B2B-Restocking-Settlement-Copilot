@@ -36,12 +36,15 @@ type InsightCards = {
 
 type StockTrendPoint = {
   date: string
-  proteinBars: number
-  proteinThreshold: number
-  coldBrew: number
-  coldBrewThreshold: number
-  rice: number
-  riceThreshold: number
+  primaryLabel: string
+  primaryStock: number
+  primaryThreshold: number
+  secondaryLabel: string
+  secondaryStock: number
+  secondaryThreshold: number
+  tertiaryLabel: string
+  tertiaryStock: number
+  tertiaryThreshold: number
 }
 
 type MonthlyDemandPoint = {
@@ -250,11 +253,23 @@ type RawRestockRequest = {
   updatedAt?: string
 }
 
+type RawSubmittedOrder = {
+  id: string
+  restockRequestId: string
+  supplierId: string
+  finalPrice: number
+  finalQuantity: number
+  status: string
+  createdAt?: string
+  updatedAt?: string
+}
+
 type RawInvoice = {
   id: string
   invoiceNumber: string
   supplierId?: string | null
   workflowId?: string | null
+  orderId?: string | null
   sourceType: string
   fileUrl?: string | null
   extractedText?: string | null
@@ -367,6 +382,7 @@ async function getDomainRows() {
     conversationMessages,
     workflows,
     restockRequests,
+    submittedOrders,
     invoices,
     invoiceProducts,
     invoiceValidationResults,
@@ -382,6 +398,7 @@ async function getDomainRows() {
     selectRows<RawConversationMessage>("conversation_messages"),
     selectRows<RawWorkflow>("workflows"),
     selectOptionalRows<RawRestockRequest>("restock_requests"),
+    selectOptionalRows<RawSubmittedOrder>("submitted_orders"),
     selectRows<RawInvoice>("invoices"),
     selectRows<RawInvoiceProduct>("invoice_products"),
     selectRows<RawInvoiceValidationResult>("invoice_validation_results"),
@@ -399,6 +416,7 @@ async function getDomainRows() {
     conversationMessages,
     workflows,
     restockRequests,
+    submittedOrders,
     invoices,
     invoiceProducts,
     invoiceValidationResults,
@@ -508,6 +526,21 @@ function displayRiskLevel(level: string): Invoice["riskLevel"] {
   }
 
   return levelMap[level] ?? "Medium Risk"
+}
+
+function titleCaseLabel(value?: string | null) {
+  return (value ?? "")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function latestTimestamp(...values: Array<string | null | undefined>) {
+  return Math.max(
+    ...values.map((value) => new Date(value ?? 0).getTime()),
+    0
+  )
 }
 
 function formatCurrencyLabel(
@@ -998,27 +1031,106 @@ function mapConversations(
   rows: Awaited<ReturnType<typeof getDomainRows>>
 ): Conversation[] {
   const productById = new Map(rows.products.map((product) => [product.id, product]))
+  const workflowByConversationId = new Map<string, RawWorkflow>()
+  rows.workflows
+    .filter((workflow) => Boolean(workflow.conversationId))
+    .forEach((workflow) => {
+      const conversationId = workflow.conversationId as string
+      const current = workflowByConversationId.get(conversationId)
+      if (
+        !current ||
+        latestTimestamp(workflow.updatedAt, workflow.createdAt) >=
+          latestTimestamp(current.updatedAt, current.createdAt)
+      ) {
+        workflowByConversationId.set(conversationId, workflow)
+      }
+    })
+  const restockRequestById = new Map(
+    rows.restockRequests.map((request) => [request.id, request])
+  )
+  const latestOrderByWorkflowId = new Map<string, RawSubmittedOrder>()
+
+  rows.submittedOrders.forEach((order) => {
+    const request = restockRequestById.get(order.restockRequestId)
+    const workflowId = request?.workflowId
+    if (!workflowId) return
+
+    const current = latestOrderByWorkflowId.get(workflowId)
+    if (
+      !current ||
+      latestTimestamp(order.updatedAt, order.createdAt) >=
+        latestTimestamp(current.updatedAt, current.createdAt)
+    ) {
+      latestOrderByWorkflowId.set(workflowId, order)
+    }
+  })
+
+  const latestInvoiceByOrderId = new Map<string, RawInvoice>()
+  const latestInvoiceByWorkflowId = new Map<string, RawInvoice>()
+
+  rows.invoices.forEach((invoice) => {
+    if (invoice.orderId) {
+      const current = latestInvoiceByOrderId.get(invoice.orderId)
+      if (
+        !current ||
+        latestTimestamp(invoice.updatedAt, invoice.createdAt) >=
+          latestTimestamp(current.updatedAt, current.createdAt)
+      ) {
+        latestInvoiceByOrderId.set(invoice.orderId, invoice)
+      }
+    }
+
+    if (invoice.workflowId) {
+      const current = latestInvoiceByWorkflowId.get(invoice.workflowId)
+      if (
+        !current ||
+        latestTimestamp(invoice.updatedAt, invoice.createdAt) >=
+          latestTimestamp(current.updatedAt, current.createdAt)
+      ) {
+        latestInvoiceByWorkflowId.set(invoice.workflowId, invoice)
+      }
+    }
+  })
 
   return rows.conversations.map((conversation) => {
     const linkedSkus = rows.conversationProducts
       .filter((link) => link.conversationId === conversation.id)
       .map((link) => productById.get(link.productId)?.sku)
       .filter((sku): sku is string => Boolean(sku))
-    const workflow = rows.workflows.find(
-      (item) => item.conversationId === conversation.id
-    )
+    const workflow = workflowByConversationId.get(conversation.id)
+    const submittedOrder = workflow?.id
+      ? latestOrderByWorkflowId.get(workflow.id)
+      : undefined
+    const linkedInvoice =
+      (submittedOrder?.id
+        ? latestInvoiceByOrderId.get(submittedOrder.id)
+        : undefined) ??
+      (workflow?.id ? latestInvoiceByWorkflowId.get(workflow.id) : undefined)
     const latestMessage = latestMessageForConversation(
       rows.conversationMessages,
       conversation.id
     )
     const state = displayState(conversation.state)
     const missingFields = latestMessage?.missingFields ?? []
+    const linkedInvoiceStatus = linkedInvoice
+      ? `Received · ${displayApprovalState(linkedInvoice.approvalState)}`
+      : submittedOrder
+        ? "Awaiting invoice"
+        : "Pending"
+    const submittedOrderStatus = submittedOrder
+      ? titleCaseLabel(submittedOrder.status)
+      : undefined
 
     return {
       id: conversation.id,
       productSku: linkedSkus[0] ?? "",
       linkedSkus,
       supplierId: conversation.supplierId ?? "",
+      workflowId: workflow?.id ?? undefined,
+      submittedOrderId: submittedOrder?.id ?? undefined,
+      submittedOrderStatus,
+      linkedInvoiceId:
+        linkedInvoice?.id ?? conversation.linkedInvoiceId ?? undefined,
       subject: conversation.title,
       source: displaySource(conversation.source),
       negotiationState: state,
@@ -1046,12 +1158,17 @@ function mapConversations(
         confidenceScore: missingFields.length > 0 ? 88 : 94,
       },
       nextAction: {
-        recommendedNextStep: nextConversationStep(state, missingFields),
+        recommendedNextStep:
+          submittedOrder && !linkedInvoice
+            ? "Await supplier invoice for the accepted order."
+            : linkedInvoice
+              ? "Review linked invoice in Invoice Management."
+              : nextConversationStep(state, missingFields),
         negotiationSummary:
           latestMessage?.content ??
           conversation.latestMessage ??
           "No negotiation summary available yet.",
-        linkedInvoiceStatus: conversation.linkedInvoiceId ? "linked" : "pending",
+        linkedInvoiceStatus,
       },
     }
   })
@@ -1094,8 +1211,9 @@ function attachmentType(
 function mapMessages(
   rows: Awaited<ReturnType<typeof getDomainRows>>
 ): NegotiationMessage[] {
+  const mappedConversations = mapConversations(rows)
   const conversationsById = new Map(
-    rows.conversations.map((conversation) => [conversation.id, conversation])
+    mappedConversations.map((conversation) => [conversation.id, conversation])
   )
 
   return rows.conversationMessages.map((message) => {
@@ -1129,6 +1247,27 @@ function mapMessages(
 function mapInvoices(rows: Awaited<ReturnType<typeof getDomainRows>>): Invoice[] {
   const productById = new Map(rows.products.map((product) => [product.id, product]))
   const workflowById = new Map(rows.workflows.map((workflow) => [workflow.id, workflow]))
+  const supplierById = new Map(rows.suppliers.map((supplier) => [supplier.id, supplier]))
+  const restockRequestById = new Map(
+    rows.restockRequests.map((request) => [request.id, request])
+  )
+  const orderById = new Map(rows.submittedOrders.map((order) => [order.id, order]))
+  const latestOrderByWorkflowId = new Map<string, RawSubmittedOrder>()
+
+  rows.submittedOrders.forEach((order) => {
+    const request = restockRequestById.get(order.restockRequestId)
+    const workflowId = request?.workflowId
+    if (!workflowId) return
+
+    const current = latestOrderByWorkflowId.get(workflowId)
+    if (
+      !current ||
+      latestTimestamp(order.updatedAt, order.createdAt) >=
+        latestTimestamp(current.updatedAt, current.createdAt)
+    ) {
+      latestOrderByWorkflowId.set(workflowId, order)
+    }
+  })
 
   return rows.invoices.map((invoice) => {
     const lines = rows.invoiceProducts.filter((line) => line.invoiceId === invoice.id)
@@ -1147,20 +1286,34 @@ function mapInvoices(rows: Awaited<ReturnType<typeof getDomainRows>>): Invoice[]
     const linkedSkus = lines
       .map((line) => productById.get(line.productId)?.sku)
       .filter((sku): sku is string => Boolean(sku))
-    const workflow = invoice.workflowId ? workflowById.get(invoice.workflowId) : undefined
+    const submittedOrder =
+      (invoice.orderId ? orderById.get(invoice.orderId) : undefined) ??
+      (invoice.workflowId ? latestOrderByWorkflowId.get(invoice.workflowId) : undefined)
+    const derivedWorkflowId =
+      invoice.workflowId ??
+      (submittedOrder
+        ? restockRequestById.get(submittedOrder.restockRequestId)?.workflowId ?? undefined
+        : undefined)
+    const workflow = derivedWorkflowId ? workflowById.get(derivedWorkflowId) : undefined
     const subtotal = lines.reduce((total, line) => total + Number(line.subtotal), 0)
     const invoiceQuantity =
       invoice.quantity ??
       lines.reduce((total, line) => total + Number(line.quantity), 0)
-    const expectedQuantity = workflow?.quantity ?? invoiceQuantity
+    const expectedQuantity = submittedOrder?.finalQuantity ?? workflow?.quantity ?? invoiceQuantity
+    const expectedUnitPrice =
+      submittedOrder?.finalPrice != null ? Number(submittedOrder.finalPrice) : null
     const expectedAmountMin =
-      workflow?.targetPriceMin != null && expectedQuantity != null
-        ? Number(workflow.targetPriceMin) * expectedQuantity
-        : null
+      expectedUnitPrice != null && expectedQuantity != null
+        ? Number((expectedUnitPrice * expectedQuantity).toFixed(2))
+        : workflow?.targetPriceMin != null && expectedQuantity != null
+          ? Number(workflow.targetPriceMin) * expectedQuantity
+          : null
     const expectedAmountMax =
-      workflow?.targetPriceMax != null && expectedQuantity != null
-        ? Number(workflow.targetPriceMax) * expectedQuantity
-        : null
+      expectedUnitPrice != null && expectedQuantity != null
+        ? Number((expectedUnitPrice * expectedQuantity).toFixed(2))
+        : workflow?.targetPriceMax != null && expectedQuantity != null
+          ? Number(workflow.targetPriceMax) * expectedQuantity
+          : null
     const negotiatedAmount = (() => {
       if (expectedAmountMax != null) return expectedAmountMax
       if (expectedAmountMin != null) return expectedAmountMin
@@ -1178,10 +1331,16 @@ function mapInvoices(rows: Awaited<ReturnType<typeof getDomainRows>>): Invoice[]
       typeof invoice.currency === "string" && /^[A-Za-z]{3}$/.test(invoice.currency.trim())
         ? invoice.currency.trim().toUpperCase()
         : "MYR"
+    const resolvedSupplierId = invoice.supplierId ?? submittedOrder?.supplierId ?? ""
     const currentSupplierName =
-      rows.suppliers.find((supplier) => supplier.id === invoice.supplierId)?.name ??
+      supplierById.get(resolvedSupplierId)?.name ??
       "Unknown supplier"
+    const orderSupplierName =
+      submittedOrder?.supplierId != null
+        ? supplierById.get(submittedOrder.supplierId)?.name
+        : undefined
     const expectedSupplierName =
+      orderSupplierName ??
       activeChecks.find((check) => /supplier/i.test(check.checkName))?.expectedValue ??
       currentSupplierName
     const unresolvedChecks = nonPassingChecks.filter(
@@ -1233,10 +1392,17 @@ function mapInvoices(rows: Awaited<ReturnType<typeof getDomainRows>>): Invoice[]
 
     return {
       id: invoice.id,
-      supplierId: invoice.supplierId ?? "",
+      supplierId: resolvedSupplierId,
       productSku: linkedSkus[0] ?? "",
       linkedSkus,
-      workflowId: invoice.workflowId ?? "",
+      workflowId: derivedWorkflowId ?? "",
+      workflowState: workflow?.currentState
+        ? titleCaseLabel(workflow.currentState)
+        : undefined,
+      orderId: submittedOrder?.id ?? invoice.orderId ?? undefined,
+      orderStatus: submittedOrder?.status
+        ? titleCaseLabel(submittedOrder.status)
+        : undefined,
       invoiceNumber: invoice.invoiceNumber,
       amount: Number(invoice.amount),
       negotiatedAmount,
@@ -1530,11 +1696,21 @@ export async function getInsightCards(): Promise<InsightCards> {
 export async function getStockTrendData(): Promise<StockTrendPoint[]> {
   const rows = await getDomainRows()
   const products = mapProducts(rows)
-  const proteinBars = products.find((product) => product.sku.includes("ALM")) ?? products[0]
-  const coldBrew = products.find((product) => product.sku.includes("CFE")) ?? products[1]
-  const rice = products.find((product) => product.sku.includes("RCE")) ?? products[2]
+  const priorityProducts = [...products]
+    .sort((first, second) => {
+      const firstGap = first.stockOnHand - first.currentThreshold
+      const secondGap = second.stockOnHand - second.currentThreshold
+      if (firstGap !== secondGap) {
+        return firstGap - secondGap
+      }
 
-  if (!proteinBars || !coldBrew || !rice) return []
+      return first.name.localeCompare(second.name)
+    })
+    .slice(0, 3)
+
+  const [primaryProduct, secondaryProduct, tertiaryProduct] = priorityProducts
+
+  if (!primaryProduct || !secondaryProduct || !tertiaryProduct) return []
 
   return [
     { date: "Apr 01", multiplier: 1.72 },
@@ -1543,12 +1719,15 @@ export async function getStockTrendData(): Promise<StockTrendPoint[]> {
     { date: "Apr 19", multiplier: 1 },
   ].map((point) => ({
     date: point.date,
-    proteinBars: Math.round(proteinBars.stockOnHand * point.multiplier),
-    proteinThreshold: proteinBars.currentThreshold,
-    coldBrew: Math.round(coldBrew.stockOnHand * point.multiplier),
-    coldBrewThreshold: coldBrew.currentThreshold,
-    rice: Math.round(rice.stockOnHand * point.multiplier),
-    riceThreshold: rice.currentThreshold,
+    primaryLabel: primaryProduct.name,
+    primaryStock: Math.round(primaryProduct.stockOnHand * point.multiplier),
+    primaryThreshold: primaryProduct.currentThreshold,
+    secondaryLabel: secondaryProduct.name,
+    secondaryStock: Math.round(secondaryProduct.stockOnHand * point.multiplier),
+    secondaryThreshold: secondaryProduct.currentThreshold,
+    tertiaryLabel: tertiaryProduct.name,
+    tertiaryStock: Math.round(tertiaryProduct.stockOnHand * point.multiplier),
+    tertiaryThreshold: tertiaryProduct.currentThreshold,
   }))
 }
 

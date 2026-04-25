@@ -653,7 +653,7 @@ async function buildInvoiceAnalysisContext(
       await supabase
         .from("invoices")
         .select(
-          "id,invoice_number,supplier_id,workflow_id,source_type,file_url,extracted_text,amount,currency,quantity,payment_terms,bank_details,ai_last_analyzed_at"
+          "id,invoice_number,supplier_id,workflow_id,order_id,source_type,file_url,extracted_text,amount,currency,quantity,payment_terms,bank_details,ai_last_analyzed_at"
         )
         .eq("id", invoiceId)
         .single()
@@ -663,31 +663,54 @@ async function buildInvoiceAnalysisContext(
     throw new Error("Invoice no longer exists.")
   }
 
-  const [invoiceLinesResult, workflow] = await Promise.all([
+  const [submittedOrder, invoiceLinesResult] = await Promise.all([
+    invoice.order_id
+      ? throwIfSupabaseError(
+          await supabase
+            .from("submitted_orders")
+            .select("id,restock_request_id,supplier_id,final_price,final_quantity,status")
+            .eq("id", invoice.order_id)
+            .maybeSingle()
+        )
+      : Promise.resolve(null),
     throwIfSupabaseError(
       await supabase
         .from("invoice_products")
         .select("id,product_id,quantity,unit_price,subtotal")
         .eq("invoice_id", invoice.id)
     ),
-    invoice.workflow_id
-      ? throwIfSupabaseError(
+  ])
+
+  const restockRequest =
+    submittedOrder?.restock_request_id
+      ? await throwIfSupabaseError(
+          await supabase
+            .from("restock_requests")
+            .select("id,workflow_id,product_id")
+            .eq("id", submittedOrder.restock_request_id)
+            .maybeSingle()
+        )
+      : null
+  const resolvedWorkflowId = invoice.workflow_id ?? restockRequest?.workflow_id ?? null
+
+  const workflow = resolvedWorkflowId
+      ? await throwIfSupabaseError(
           await supabase
             .from("workflows")
             .select(
               "id,product_id,current_state,quantity,target_price_min,target_price_max,conversation_id"
             )
-            .eq("id", invoice.workflow_id)
+            .eq("id", resolvedWorkflowId)
             .maybeSingle()
         )
-      : Promise.resolve(null),
-  ])
+      : null
   const invoiceLines = invoiceLinesResult ?? []
 
   const productIds = Array.from(
     new Set(
       invoiceLines
         .map((line) => line.product_id as string | null | undefined)
+        .concat(restockRequest?.product_id ? [restockRequest.product_id] : [])
         .filter((value): value is string => Boolean(value))
     )
   )
@@ -706,6 +729,7 @@ async function buildInvoiceAnalysisContext(
     new Set(
       [
         invoice.supplier_id,
+        submittedOrder?.supplier_id,
         ...products.map((product) => product.primary_supplier_id),
       ].filter((value): value is string => Boolean(value))
     )
@@ -735,9 +759,10 @@ async function buildInvoiceAnalysisContext(
     )
   )
   const expectedSupplierId =
-    uniquePrimarySupplierIds.length === 1
+    submittedOrder?.supplier_id ??
+    (uniquePrimarySupplierIds.length === 1
       ? uniquePrimarySupplierIds[0]
-      : (invoice.supplier_id ?? null)
+      : (invoice.supplier_id ?? null))
   const expectedSupplier = expectedSupplierId
     ? supplierById.get(expectedSupplierId)
     : invoiceSupplier
@@ -796,16 +821,30 @@ async function buildInvoiceAnalysisContext(
     typeof invoice.quantity === "number"
       ? invoice.quantity
       : invoiceLines.reduce((total, line) => total + Number(line.quantity), 0)
-  const expectedQuantity = workflow?.quantity ?? quantity ?? null
+  const submittedOrderQuantity =
+    submittedOrder?.final_quantity == null
+      ? null
+      : Number(submittedOrder.final_quantity)
+  const submittedOrderUnitPrice =
+    submittedOrder?.final_price == null
+      ? null
+      : Number(submittedOrder.final_price)
+  const expectedQuantity = submittedOrderQuantity ?? workflow?.quantity ?? quantity ?? null
   const priceMin =
-    workflow?.target_price_min == null ? null : Number(workflow.target_price_min)
+    submittedOrderUnitPrice ??
+    (workflow?.target_price_min == null ? null : Number(workflow.target_price_min))
   const priceMax =
-    workflow?.target_price_max == null ? null : Number(workflow.target_price_max)
+    submittedOrderUnitPrice ??
+    (workflow?.target_price_max == null ? null : Number(workflow.target_price_max))
+  const submittedOrderAmount =
+    submittedOrderUnitPrice != null && submittedOrderQuantity != null
+      ? Number((submittedOrderUnitPrice * submittedOrderQuantity).toFixed(2))
+      : null
 
   const invoiceData: InvoiceAnalysisInvoiceData = {
     id: invoice.id,
     invoiceNumber: invoice.invoice_number,
-    workflowId: invoice.workflow_id,
+    workflowId: resolvedWorkflowId,
     supplierId: invoice.supplier_id,
     supplierName: invoiceSupplier?.name ?? null,
     sourceType: invoice.source_type,
@@ -830,21 +869,31 @@ async function buildInvoiceAnalysisContext(
   }
 
   const expectedData: InvoiceAnalysisExpectedData = {
+    expectedOrderId: submittedOrder?.id ?? null,
     workflowState: workflow?.current_state ?? null,
     conversationState: conversation?.state ?? null,
     expectedSupplierId: expectedSupplierId ?? null,
     expectedSupplierName: expectedSupplier?.name ?? null,
     expectedQuantity,
+    expectedUnitPrice: submittedOrderUnitPrice ?? null,
     targetUnitPriceMin: priceMin,
     targetUnitPriceMax: priceMax,
-    expectedAmountMin:
-      expectedQuantity != null && priceMin != null
-        ? Number((expectedQuantity * priceMin).toFixed(2))
-        : null,
-    expectedAmountMax:
-      expectedQuantity != null && priceMax != null
+    expectedAmount:
+      submittedOrderAmount ??
+      (expectedQuantity != null && priceMax != null && priceMin != null && priceMin === priceMax
         ? Number((expectedQuantity * priceMax).toFixed(2))
-        : null,
+        : null),
+    expectedAmountMin:
+      submittedOrderAmount ??
+      (expectedQuantity != null && priceMin != null
+        ? Number((expectedQuantity * priceMin).toFixed(2))
+        : null),
+    expectedAmountMax:
+      submittedOrderAmount ??
+      (expectedQuantity != null && priceMax != null
+        ? Number((expectedQuantity * priceMax).toFixed(2))
+        : null),
+    expectedCurrency: null,
     expectedBankDetails: referenceInvoice?.bank_details ?? null,
     expectedPaymentTerms: referenceInvoice?.payment_terms ?? null,
     referenceInvoiceNumber: referenceInvoice?.invoice_number ?? null,
@@ -1072,7 +1121,7 @@ async function repairInvoiceFieldsFromParsedData(
     supportedParsedCurrency &&
     (isReplaceableNumericField(Number(context.invoice.amount)) ||
       !context.invoice.currency ||
-      (normalizeStoredInvoiceCurrency(context.invoice.currency) === "USD" &&
+      (normalizeStoredInvoiceCurrency(context.invoice.currency) === "MYR" &&
         supportedParsedCurrency !== context.invoice.currency &&
         isReplaceableNumericField(Number(context.invoice.amount))))
   ) {
@@ -1302,6 +1351,7 @@ export async function analyzeThresholdsAction(
       createdCount: payload?.created_count,
       results: (payload?.results ?? []).map((item: {
         sku: string
+        product_name?: string
         status: string
         detail?: string
         current_threshold?: number | null
@@ -1310,6 +1360,7 @@ export async function analyzeThresholdsAction(
         trace?: Array<Record<string, unknown>>
       }) => ({
         sku: item.sku,
+        productName: item.product_name,
         status: item.status,
         detail: item.detail,
         currentThreshold:
@@ -1381,12 +1432,19 @@ export async function analyzeRestockSuggestionsAction(): Promise<ThresholdAnalys
           : "Restock analysis finished with no new requests.",
       analyzedCount: payload?.analyzed_count,
       createdCount: payload?.created_count,
-      results: (payload?.results ?? []).map((item: any) => ({
+      results: (payload?.results ?? []).map((item: {
+        sku: string
+        product_name?: string
+        status: string
+        detail?: string
+        trace?: Array<Record<string, unknown>>
+      }) => ({
         sku: item.sku,
+        productName: item.product_name,
         status: item.status,
         detail: item.detail,
         trace: Array.isArray(item.trace)
-          ? item.trace.map((event: any) => ({
+          ? item.trace.map((event: Record<string, unknown>) => ({
               kind: typeof event?.kind === "string" ? event.kind : "event",
               message: typeof event?.message === "string" ? event.message : "",
               toolName:
@@ -1527,6 +1585,12 @@ export async function updateProductAction(
         )
       }
     }
+
+    await syncAutoRestockRequestForProduct(supabase, {
+      productId: payload.productId,
+      sku: payload.sku,
+      triggerSource: "product_update",
+    })
 
     revalidateProductPaths(payload.sku)
     return success("Product updated.")
@@ -1729,6 +1793,102 @@ export async function setSupplierAssignmentAction({
   }
 }
 
+async function syncAutoRestockRequestForProduct(
+  supabase: AppSupabaseClient,
+  payload: {
+    productId: string
+    sku?: string
+    triggerSource: "product_update" | "threshold_update"
+  }
+) {
+  const product = await throwIfSupabaseError(
+    await supabase
+      .from("products")
+      .select("id,sku,name,current_stock,current_threshold")
+      .eq("id", payload.productId)
+      .single()
+  )
+
+  if (!product) {
+    throw new Error("Product no longer exists.")
+  }
+
+  const belowThreshold =
+    Number(product.current_stock) < Number(product.current_threshold)
+  const requestedQuantity = Math.max(
+    Number(product.current_threshold) - Number(product.current_stock),
+    Number(product.current_threshold)
+  )
+
+  const activeRequests = await throwIfSupabaseError(
+    await supabase
+      .from("restock_requests")
+      .select("id,status,workflow_id")
+      .eq("product_id", payload.productId)
+      .in("status", ["pending", "reviewed", "accepted"])
+      .order("updated_at", { ascending: false })
+  )
+  const activeRequest = (activeRequests ?? [])[0]
+
+  const latestWorkflow = await throwIfSupabaseError(
+    await supabase
+      .from("workflows")
+      .select("id,current_state")
+      .eq("product_id", payload.productId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  )
+  const hasActiveWorkflow =
+    Boolean(latestWorkflow?.id) &&
+    !["stock_healthy", "completed"].includes(
+      latestWorkflow?.current_state ?? ""
+    )
+
+  if (belowThreshold) {
+    const reasonSummary =
+      payload.triggerSource === "threshold_update"
+        ? `${product.name} is below the updated threshold and was auto-added to restock review.`
+        : `${product.name} is below the current threshold and was auto-added to restock review.`
+
+    if (activeRequest?.id) {
+      await throwIfSupabaseError(
+        await supabase
+          .from("restock_requests")
+          .update({
+            requested_threshold: product.current_threshold,
+            requested_quantity: requestedQuantity,
+            reason_summary: reasonSummary,
+          })
+          .eq("id", activeRequest.id)
+      )
+    } else if (!hasActiveWorkflow) {
+      await throwIfSupabaseError(
+        await supabase.from("restock_requests").insert({
+          id: id("rr"),
+          product_id: payload.productId,
+          target_price_min: null,
+          target_price_max: null,
+          requested_threshold: product.current_threshold,
+          requested_quantity: requestedQuantity,
+          reason_summary: reasonSummary,
+          status: "pending",
+          requested_by: "system",
+        })
+      )
+    }
+  } else if (activeRequest?.id && !activeRequest.workflow_id) {
+    await throwIfSupabaseError(
+      await supabase
+        .from("restock_requests")
+        .delete()
+        .eq("id", activeRequest.id)
+    )
+  }
+
+  revalidateProductPaths(payload.sku ?? product.sku)
+}
+
 export async function decideThresholdRequestAction(
   payload: ThresholdDecisionPayload
 ): Promise<ActionResult> {
@@ -1767,6 +1927,12 @@ export async function decideThresholdRequestAction(
           })
           .eq("id", product.id)
       )
+
+      await syncAutoRestockRequestForProduct(supabase, {
+        productId: product.id,
+        sku: product.sku,
+        triggerSource: "threshold_update",
+      })
     }
 
     await throwIfSupabaseError(
@@ -1850,7 +2016,7 @@ export async function startRestockWorkflowAction(
     const product = await throwIfSupabaseError(
       await supabase
         .from("products")
-        .select("id,current_stock,current_threshold")
+        .select("id,name,current_stock,current_threshold,primary_supplier_id")
         .eq("id", payload.productId)
         .single()
     )
@@ -1897,6 +2063,119 @@ export async function startRestockWorkflowAction(
 
     if (!workflowId) {
       throw new Error("Unable to start restock workflow.")
+    }
+
+    const workflowConversation = await throwIfSupabaseError(
+      await supabase
+        .from("workflows")
+        .select("id,conversation_id")
+        .eq("id", workflowId)
+        .maybeSingle()
+    )
+
+    let conversationId = workflowConversation?.conversation_id as
+      | string
+      | undefined
+
+    if (!conversationId) {
+      if (!product.primary_supplier_id) {
+        throw new Error("This product needs a primary supplier before negotiation can begin.")
+      }
+
+      const existingConversation = await throwIfSupabaseError(
+        await supabase
+          .from("conversations")
+          .select("id")
+          .eq("supplier_id", product.primary_supplier_id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      )
+
+      conversationId = existingConversation?.id as string | undefined
+
+      if (conversationId) {
+        await throwIfSupabaseError(
+          await supabase
+            .from("conversations")
+            .update({
+              title: `${product.name} restock negotiation`,
+              state: "new_input",
+              priority:
+                Number(product.current_stock) < Number(product.current_threshold)
+                  ? "high"
+                  : "medium",
+              latest_message:
+                "AI Restock added a new product workflow to this supplier negotiation.",
+            })
+            .eq("id", conversationId)
+        )
+      } else {
+        const createdConversation = await throwIfSupabaseError(
+          await supabase
+            .from("conversations")
+            .insert({
+              id: id("conv"),
+              supplier_id: product.primary_supplier_id,
+              title: `${product.name} restock negotiation`,
+              source: "email",
+              state: "new_input",
+              priority:
+                Number(product.current_stock) < Number(product.current_threshold)
+                  ? "high"
+                  : "medium",
+              latest_message:
+                "AI Restock opened a new supplier negotiation for this product.",
+            })
+            .select("id")
+            .single()
+        )
+
+        conversationId = createdConversation?.id as string | undefined
+      }
+
+      if (conversationId) {
+        await throwIfSupabaseError(
+          await supabase.from("conversation_messages").insert({
+            id: id("msg"),
+            conversation_id: conversationId,
+            sender_type: "ai",
+            message_type: "text",
+            content:
+              existingConversation?.id
+                ? "AI Restock added this product to the existing supplier negotiation after it dropped below its reorder threshold."
+                : "AI Restock opened this negotiation after the product dropped below its reorder threshold.",
+          })
+        )
+      }
+
+      if (conversationId) {
+        const existingConversationProduct = await throwIfSupabaseError(
+          await supabase
+            .from("conversation_products")
+            .select("id")
+            .eq("conversation_id", conversationId)
+            .eq("product_id", payload.productId)
+            .maybeSingle()
+        )
+
+        if (!existingConversationProduct) {
+          await throwIfSupabaseError(
+            await supabase.from("conversation_products").insert({
+              id: id("cp"),
+              conversation_id: conversationId,
+              product_id: payload.productId,
+            })
+          )
+        }
+
+        await throwIfSupabaseError(
+          await supabase
+            .from("workflows")
+            .update({ conversation_id: conversationId })
+            .eq("id", workflowId)
+        )
+      }
     }
 
     const activeRestockRequests = await throwIfSupabaseError(
@@ -1972,6 +2251,10 @@ export async function startRestockWorkflowAction(
     )
 
     revalidateProductPaths(payload.sku)
+    revalidatePath("/conversations")
+    if (conversationId) {
+      revalidatePath(`/conversations/${conversationId}`)
+    }
     return success("Restock workflow started.")
   } catch (error) {
     return failure(error)
@@ -3024,6 +3307,7 @@ async function syncInvoiceWorkflowState(
   invoice: {
     id: string
     workflow_id?: string | null
+    order_id?: string | null
     invoice_number: string
   },
   options: {
@@ -3052,6 +3336,16 @@ async function syncInvoiceWorkflowState(
     if (options.completeWorkflow) {
       await throwIfSupabaseError(
         await supabase
+          .from("workflows")
+          .update({
+            current_state: "completed",
+            approval_state: "completed",
+          })
+          .eq("id", invoice.workflow_id)
+      )
+
+      await throwIfSupabaseError(
+        await supabase
           .from("restock_requests")
           .delete()
           .eq("workflow_id", invoice.workflow_id)
@@ -3073,7 +3367,28 @@ async function syncInvoiceWorkflowState(
           })
           .eq("id", invoice.workflow_id)
       )
+
+      await throwIfSupabaseError(
+        await supabase.from("workflow_events").insert({
+          id: id("we"),
+          workflow_id: invoice.workflow_id,
+          state: options.workflowState,
+          note: options.note,
+          actor_type: options.actorType,
+        })
+      )
     }
+  }
+
+  if (invoice.order_id && options.completeWorkflow) {
+    await throwIfSupabaseError(
+      await supabase
+        .from("submitted_orders")
+        .update({
+          status: "delivered",
+        })
+        .eq("id", invoice.order_id)
+    )
   }
 
   await throwIfSupabaseError(
@@ -3097,7 +3412,7 @@ async function getInvoiceDecisionRecord(
   const invoice = await throwIfSupabaseError(
     await supabase
       .from("invoices")
-      .select("id,invoice_number,workflow_id,approval_state")
+      .select("id,invoice_number,workflow_id,order_id,approval_state")
       .eq("id", invoiceId)
       .single()
   )
@@ -3270,7 +3585,7 @@ export async function setInvoiceDecisionAction(
     const invoice = await throwIfSupabaseError(
       await supabase
         .from("invoices")
-        .select("id,invoice_number,workflow_id,approval_state")
+        .select("id,invoice_number,workflow_id,order_id,approval_state")
         .eq("id", payload.invoiceId)
         .single()
     )
@@ -3338,6 +3653,15 @@ export async function setInvoiceDecisionAction(
       }
 
       if (payload.decision === "complete") {
+        if (invoice.order_id) {
+          await throwIfSupabaseError(
+            await supabase
+              .from("submitted_orders")
+              .update({ status: "delivered" })
+              .eq("id", invoice.order_id)
+          )
+        }
+
         await throwIfSupabaseError(
           await supabase
             .from("restock_requests")

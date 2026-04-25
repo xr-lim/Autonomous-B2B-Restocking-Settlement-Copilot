@@ -12,6 +12,7 @@ drop table if exists public.invoice_actions cascade;
 drop table if exists public.invoice_validation_results cascade;
 drop table if exists public.invoice_products cascade;
 drop table if exists public.invoices cascade;
+drop table if exists public.submitted_orders cascade;
 drop table if exists public.workflow_events cascade;
 drop table if exists public.restock_requests cascade;
 drop table if exists public.workflows cascade;
@@ -247,11 +248,25 @@ create table public.workflow_events (
   created_at timestamptz not null default now()
 );
 
+create table public.submitted_orders (
+  id text primary key,
+  restock_request_id text not null references public.restock_requests(id) on delete cascade,
+  supplier_id text not null references public.suppliers(id) on delete cascade,
+  final_price numeric(12, 2) not null check (final_price >= 0),
+  final_quantity integer not null check (final_quantity >= 0),
+  status text not null check (
+    status in ('confirmed', 'shipped', 'delivered', 'cancelled')
+  ) default 'confirmed',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table public.invoices (
   id text primary key,
   invoice_number text not null unique,
   supplier_id text references public.suppliers(id) on delete set null,
   workflow_id text references public.workflows(id) on delete set null,
+  order_id text references public.submitted_orders(id) on delete set null,
   source_type text not null check (
     source_type in ('pdf', 'image', 'email_attachment', 'upload')
   ),
@@ -265,7 +280,7 @@ create table public.invoices (
   quantity integer check (quantity is null or quantity >= 0),
   payment_terms text,
   bank_details text,
-  risk_confidence integer check (
+  risk_confidence numeric check (
     risk_confidence is null or (risk_confidence >= 0 and risk_confidence <= 100)
   ),
   ai_summary text,
@@ -355,6 +370,10 @@ create trigger set_workflows_updated_at
 before update on public.workflows
 for each row execute function public.set_updated_at();
 
+create trigger set_submitted_orders_updated_at
+before update on public.submitted_orders
+for each row execute function public.set_updated_at();
+
 create trigger set_restock_requests_updated_at
 before update on public.restock_requests
 for each row execute function public.set_updated_at();
@@ -391,10 +410,18 @@ create index idx_restock_requests_workflow_id
   on public.restock_requests (workflow_id);
 create index idx_restock_requests_status
   on public.restock_requests (status);
+create index idx_submitted_orders_restock_request_id
+  on public.submitted_orders (restock_request_id);
+create index idx_submitted_orders_supplier_id
+  on public.submitted_orders (supplier_id);
+create index idx_submitted_orders_status
+  on public.submitted_orders (status);
 create index idx_invoices_supplier_id
   on public.invoices (supplier_id);
 create index idx_invoices_workflow_id
   on public.invoices (workflow_id);
+create index idx_invoices_order_id
+  on public.invoices (order_id);
 create index idx_invoice_products_invoice_id
   on public.invoice_products (invoice_id);
 create index idx_invoice_products_product_id

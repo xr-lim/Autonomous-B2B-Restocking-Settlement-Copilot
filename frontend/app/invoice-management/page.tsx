@@ -3,8 +3,6 @@ import { History } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
 import { InvoiceBoard } from "@/components/shared/invoice-board"
-import { InvoiceUploadActions } from "@/components/shared/invoice-upload-actions"
-import { TestInvoiceActions } from "@/components/shared/test-invoice-actions"
 import { Button } from "@/components/ui/button"
 import { getInvoices, getSuppliers } from "@/lib/data"
 
@@ -18,11 +16,9 @@ export default async function InvoiceManagementPage() {
       <PageHeader
         eyebrow="Finance operations"
         title="Invoice Management"
-        description="Review invoice risk, validation status, and approval pipeline."
+        description="Monitor supplier invoices created from negotiation and track validation, risk, and approval progress."
         actions={
           <div className="flex flex-wrap items-start justify-end gap-2">
-            <InvoiceUploadActions />
-            <TestInvoiceActions />
             <Button
               asChild
               variant="outline"

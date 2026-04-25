@@ -46,9 +46,11 @@ export default async function ConversationDetailPage({
   const linkedProducts = conversation.linkedSkus
     .map((sku) => products.find((product) => product.sku === sku))
     .filter((product): product is Product => Boolean(product))
-  const linkedInvoice = invoices.find((invoice) =>
-    conversation.linkedSkus.includes(invoice.productSku)
-  )
+  const linkedInvoice =
+    (conversation.linkedInvoiceId
+      ? invoices.find((invoice) => invoice.id === conversation.linkedInvoiceId)
+      : undefined) ??
+    invoices.find((invoice) => invoice.workflowId === conversation.workflowId)
   const invoicesById: Record<string, Invoice> = Object.fromEntries(
     invoices.map((invoice) => [invoice.id, invoice])
   )

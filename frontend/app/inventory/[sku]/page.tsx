@@ -78,9 +78,20 @@ export default async function InventoryDetailPage({
   }
 
   const supplier = suppliers.find((item) => item.id === product.supplierId)
-  const conversation = conversations.find(
-    (item) => item.id === product.conversationId
-  )
+  const conversation =
+    conversations.find((item) => item.id === product.conversationId) ??
+    [...conversations]
+      .filter(
+        (item) =>
+          item.linkedSkus.includes(product.sku) ||
+          item.productSku === product.sku ||
+          item.supplierId === product.supplierId
+      )
+      .sort(
+        (first, second) =>
+          new Date(second.lastMessageAt).getTime() -
+          new Date(first.lastMessageAt).getTime()
+      )[0]
   const analysis =
     thresholdAnalysisBySku[
       product.sku as keyof typeof thresholdAnalysisBySku

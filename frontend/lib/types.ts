@@ -181,6 +181,10 @@ export type Conversation = {
   productSku: string
   linkedSkus: string[]
   supplierId: string
+  workflowId?: string
+  submittedOrderId?: string
+  submittedOrderStatus?: string
+  linkedInvoiceId?: string
   subject: string
   source: ConversationSource
   negotiationState: NegotiationState
@@ -212,6 +216,9 @@ export type Invoice = {
   productSku: string
   linkedSkus: string[]
   workflowId: string
+  workflowState?: string
+  orderId?: string
+  orderStatus?: string
   invoiceNumber: string
   amount: number
   negotiatedAmount: number

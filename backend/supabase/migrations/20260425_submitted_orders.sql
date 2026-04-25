@@ -16,15 +16,17 @@ create table if not exists public.submitted_orders (
 alter table public.invoices
   add column if not exists order_id text references public.submitted_orders(id) on delete set null;
 
+drop trigger if exists set_submitted_orders_updated_at on public.submitted_orders;
+
 create trigger set_submitted_orders_updated_at
 before update on public.submitted_orders
 for each row execute function public.set_updated_at();
 
-create index idx_submitted_orders_restock_request_id
+create index if not exists idx_submitted_orders_restock_request_id
   on public.submitted_orders (restock_request_id);
-create index idx_submitted_orders_supplier_id
+create index if not exists idx_submitted_orders_supplier_id
   on public.submitted_orders (supplier_id);
-create index idx_submitted_orders_status
+create index if not exists idx_submitted_orders_status
   on public.submitted_orders (status);
-create index idx_invoices_order_id
+create index if not exists idx_invoices_order_id
   on public.invoices (order_id);

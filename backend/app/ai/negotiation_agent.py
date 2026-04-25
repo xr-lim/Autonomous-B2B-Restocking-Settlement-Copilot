@@ -1,6 +1,7 @@
 from typing import Any
 
 import json
+from typing import Any
 
 from app.ai.client import create_message, extract_text
 from app.ai.tools import (
@@ -12,7 +13,14 @@ from app.ai.tools import (
 )
 
 
-async def run_negotiation_agent(conversation_id: str, supplier_message: str | None = None, restock_request_id: str | None = None) -> str:
+async def run_negotiation_agent(
+    conversation_id: str,
+    supplier_message: str | None = None,
+    restock_request_id: str | None = None,
+    file_url: str | None = None,
+    file_name: str | None = None,
+    file_type: str | None = None,
+) -> str:
     """Run the negotiation agent for restock order discussions.
 
     Args:
@@ -24,7 +32,7 @@ async def run_negotiation_agent(conversation_id: str, supplier_message: str | No
         The agent's response text
     """
     # Prepare the input message
-    if supplier_message is None:
+    if supplier_message is None and not file_url:
         # Starting negotiation - agent should formulate initial proposal
         input_message = f"Start a negotiation for conversation {conversation_id}. Get the context and make an initial proposal."
 
@@ -34,11 +42,28 @@ async def run_negotiation_agent(conversation_id: str, supplier_message: str | No
 
     else:
         # Responding to supplier's message
-        input_message = (
-            f"Conversation {conversation_id}: {supplier_message} "
+        input_parts = [f"Conversation {conversation_id}:"]
+
+        if supplier_message:
+            input_parts.append(supplier_message)
+
+        if file_url:
+            attachment_bits = [f"Supplier uploaded a file attachment: {file_url}."]
+            if file_name:
+                attachment_bits.append(f"File name: {file_name}.")
+            if file_type:
+                attachment_bits.append(f"File type: {file_type}.")
+            attachment_bits.append(
+                "If this is an invoice attachment and the order is already accepted, use record_invoice to register it."
+            )
+            input_parts.append(" ".join(attachment_bits))
+
+        input_parts.append(
             "ALWAYS start by using get_restock_context with conversation_id to get the target prices and product details. "
             "Then evaluate the supplier's offer against our budget constraints."
         )
+
+        input_message = " ".join(input_parts)
 
     tools = [
         {
@@ -132,9 +157,14 @@ async def run_negotiation_agent(conversation_id: str, supplier_message: str | No
                     "file_url": {
                         "type": "string",
                         "description": "The URL to the uploaded invoice file"
+                    },
+                    "source_type": {
+                        "type": "string",
+                        "enum": ["pdf", "image", "email_attachment", "upload"],
+                        "description": "Attachment source type. Use pdf or image when known."
                     }
                 },
-                "required": ["order_id", "amount", "invoice_number", "file_url"]
+                "required": ["file_url"]
             }
         }
     ]

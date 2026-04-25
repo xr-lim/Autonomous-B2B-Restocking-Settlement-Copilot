@@ -30,10 +30,21 @@ class SupplierReplyRequest(BaseModel):
         min_length=1,
         description="The conversation ID for this supplier reply.",
     )
-    supplier_message: str = Field(
-        ...,
-        min_length=1,
+    supplier_message: str | None = Field(
+        default=None,
         description="The supplier's message or counter-offer.",
+    )
+    file_url: str | None = Field(
+        default=None,
+        description="Optional uploaded file URL from the supplier.",
+    )
+    file_name: str | None = Field(
+        default=None,
+        description="Optional uploaded file name.",
+    )
+    file_type: str | None = Field(
+        default=None,
+        description="Optional uploaded file MIME type.",
     )
 
 async def _emit_ai_message(conversation_id: str, content: str) -> None:
@@ -134,13 +145,29 @@ async def supplier_reply(request: SupplierReplyRequest):
         JSON response with the agent's counter-offer or acceptance
     """
     try:
+        supplier_message = (request.supplier_message or "").strip()
+        if not supplier_message and not request.file_url:
+            raise HTTPException(
+                status_code=400,
+                detail="A supplier message or uploaded file is required.",
+            )
+
         # Persist + emit the supplier message immediately (fresh session), then run the agent.
         await _persist_and_emit_message(
             conversation_id=request.conversation_id,
             sender="Supplier",
-            content=request.supplier_message,
+            content=supplier_message,
+            file_url=request.file_url,
+            file_name=request.file_name,
+            file_type=request.file_type,
         )
-        response = await run_negotiation_agent(request.conversation_id, request.supplier_message)
+        response = await run_negotiation_agent(
+            request.conversation_id,
+            supplier_message or None,
+            file_url=request.file_url,
+            file_name=request.file_name,
+            file_type=request.file_type,
+        )
         await _emit_ai_message(request.conversation_id, response)
         return {
             "conversation_id": request.conversation_id,

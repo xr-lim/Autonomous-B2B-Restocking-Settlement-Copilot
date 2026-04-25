@@ -20,12 +20,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 type StockTrendPoint = {
   date: string
-  proteinBars: number
-  proteinThreshold: number
-  coldBrew: number
-  coldBrewThreshold: number
-  rice: number
-  riceThreshold: number
+  primaryLabel: string
+  primaryStock: number
+  primaryThreshold: number
+  secondaryLabel: string
+  secondaryStock: number
+  secondaryThreshold: number
+  tertiaryLabel: string
+  tertiaryStock: number
+  tertiaryThreshold: number
 }
 
 type MonthlyDemandPoint = {
@@ -153,22 +156,25 @@ export function DashboardCharts({
   const latestStock = stockTrendData[stockTrendData.length - 1]
   const stockHighlights = [
     {
-      label: "Protein Bars",
-      stock: latestStock.proteinBars,
-      threshold: latestStock.proteinThreshold,
+      label: latestStock.primaryLabel,
+      stock: latestStock.primaryStock,
+      threshold: latestStock.primaryThreshold,
       color: "#3B82F6",
+      thresholdLabel: `${latestStock.primaryLabel} Threshold`,
     },
     {
-      label: "Cold Brew",
-      stock: latestStock.coldBrew,
-      threshold: latestStock.coldBrewThreshold,
+      label: latestStock.secondaryLabel,
+      stock: latestStock.secondaryStock,
+      threshold: latestStock.secondaryThreshold,
       color: "#10B981",
+      thresholdLabel: `${latestStock.secondaryLabel} Threshold`,
     },
     {
-      label: "Jasmine Rice",
-      stock: latestStock.rice,
-      threshold: latestStock.riceThreshold,
+      label: latestStock.tertiaryLabel,
+      stock: latestStock.tertiaryStock,
+      threshold: latestStock.tertiaryThreshold,
       color: "#F59E0B",
+      thresholdLabel: `${latestStock.tertiaryLabel} Threshold`,
     },
   ]
 
@@ -258,8 +264,8 @@ export function DashboardCharts({
             <Legend wrapperStyle={{ color: "#9CA3AF", fontSize: 12 }} />
             <Line
               type="monotone"
-              dataKey="proteinBars"
-              name="Protein Bars"
+              dataKey="primaryStock"
+              name={latestStock.primaryLabel}
               stroke="#3B82F6"
               strokeWidth={2.5}
               dot={false}
@@ -267,8 +273,8 @@ export function DashboardCharts({
             />
             <Line
               type="monotone"
-              dataKey="proteinThreshold"
-              name="Protein Threshold"
+              dataKey="primaryThreshold"
+              name={`${latestStock.primaryLabel} Threshold`}
               stroke="#3B82F6"
               strokeDasharray="5 5"
               strokeWidth={1.5}
@@ -276,8 +282,8 @@ export function DashboardCharts({
             />
             <Line
               type="monotone"
-              dataKey="coldBrew"
-              name="Cold Brew"
+              dataKey="secondaryStock"
+              name={latestStock.secondaryLabel}
               stroke="#10B981"
               strokeWidth={2.5}
               dot={false}
@@ -285,8 +291,8 @@ export function DashboardCharts({
             />
             <Line
               type="monotone"
-              dataKey="coldBrewThreshold"
-              name="Cold Brew Threshold"
+              dataKey="secondaryThreshold"
+              name={`${latestStock.secondaryLabel} Threshold`}
               stroke="#10B981"
               strokeDasharray="5 5"
               strokeWidth={1.5}
@@ -294,8 +300,8 @@ export function DashboardCharts({
             />
             <Line
               type="monotone"
-              dataKey="rice"
-              name="Jasmine Rice"
+              dataKey="tertiaryStock"
+              name={latestStock.tertiaryLabel}
               stroke="#F59E0B"
               strokeWidth={2.5}
               dot={false}
@@ -303,8 +309,8 @@ export function DashboardCharts({
             />
             <Line
               type="monotone"
-              dataKey="riceThreshold"
-              name="Rice Threshold"
+              dataKey="tertiaryThreshold"
+              name={`${latestStock.tertiaryLabel} Threshold`}
               stroke="#F59E0B"
               strokeDasharray="5 5"
               strokeWidth={1.5}

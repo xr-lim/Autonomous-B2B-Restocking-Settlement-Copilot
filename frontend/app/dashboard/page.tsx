@@ -12,6 +12,7 @@ import {
   Receipt,
   Sparkles,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 import { PageHeader } from "@/components/layout/page-header"
 import { CollapsibleSection } from "@/components/shared/collapsible-section"
@@ -100,7 +101,13 @@ export default async function DashboardPage() {
     (invoice) => invoice.approvalState === "Completed" || invoice.status === "paid"
   )
   const supplierReplyCount = insightCards.recentSupplierActivity.length
-  const kpiCards = [
+  const kpiCards: Array<{
+    title: string
+    value: string
+    change: string
+    tone: StatusTone
+    icon: LucideIcon
+  }> = [
     {
       title: "Low Stock Items",
       value: actionableRestocks.length.toString(),

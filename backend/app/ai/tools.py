@@ -1933,20 +1933,23 @@ def _record_invoice_impl(
         final_invoice_number = invoice_number if invoice_number else f"INV-{uuid.uuid4().hex[:8].upper()}"
         final_source_type = source_type
 
+        invoice_values: dict[str, Any] = {
+            "id": invoice_id,
+            "amount": final_amount,
+            "invoice_number": final_invoice_number,
+            "file_url": file_url,
+            "source_type": final_source_type,
+            "currency": "MYR",
+            "validation_status": "parsed",
+            "risk_level": "low",
+            "approval_state": "waiting_approval",
+        }
+        if "order_id" in invoices.c:
+            invoice_values["order_id"] = order_id
+
         created_invoice = session.execute(
             insert(invoices)
-            .values(
-                id=invoice_id,
-                order_id=order_id,
-                amount=final_amount,
-                invoice_number=final_invoice_number,
-                file_url=file_url,
-                source_type=final_source_type,
-                currency="USD",  # Default currency
-                validation_status="parsed",
-                risk_level="low",  # Default risk level
-                approval_state="waiting_approval",
-            )
+            .values(**invoice_values)
             .returning(*invoices.c)
         ).mappings().one()
         session.commit()

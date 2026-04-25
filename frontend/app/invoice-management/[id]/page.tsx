@@ -109,8 +109,6 @@ export default async function InvoiceDetailPage({
   const supplierExpectedValue =
     invoice.expectedSupplierName ?? supplier?.name ?? "Unknown supplier"
   const supplierActualValue = supplier?.name ?? "Unknown supplier"
-  const bankDetailsExpectedValue = invoice.expectedBankDetails ?? "Supplier master"
-  const bankDetailsActualValue = invoice.bankDetails
   const currencyExpectedValue = invoice.expectedCurrency ?? "MYR"
   const currencyActualValue = invoice.currency ?? "MYR"
 
@@ -180,7 +178,7 @@ export default async function InvoiceDetailPage({
           </Button>
         }
       />
-      <section className="grid grid-cols-5 gap-3">
+      <section className="grid grid-cols-6 gap-3">
         <SummaryTile label="Invoice ID" value={invoice.id} />
         <SummaryTile label="Supplier" value={supplier?.name ?? "Unknown supplier"} />
         <div className="rounded-[10px] border border-[#243047] bg-[#111827] p-4">
@@ -197,6 +195,14 @@ export default async function InvoiceDetailPage({
             ))}
           </div>
         </div>
+        <SummaryTile
+          label="Submitted Order"
+          value={
+            invoice.orderId
+              ? `${invoice.orderId}${invoice.orderStatus ? ` · ${invoice.orderStatus}` : ""}`
+              : "Pending negotiation"
+          }
+        />
         <SummaryTile label="Workflow ID" value={invoice.workflowId} />
         <div className="rounded-[10px] border border-[#243047] bg-[#111827] p-4">
           <p className="text-[13px] text-[#9CA3AF]">Approval State</p>
@@ -207,6 +213,10 @@ export default async function InvoiceDetailPage({
             />
           </div>
         </div>
+        <SummaryTile
+          label="Workflow State"
+          value={invoice.workflowState ?? "Awaiting workflow sync"}
+        />
       </section>
 
       <section className="grid grid-cols-[1fr_380px] gap-6">
@@ -263,7 +273,6 @@ export default async function InvoiceDetailPage({
               <InfoRow label="Subtotal" value={`${invoice.currency} ${invoice.subtotal.toLocaleString("en-US")}`} />
               <InfoRow label="Total" value={`${invoice.currency} ${invoice.amount.toLocaleString("en-US")}`} />
               <InfoRow label="Currency" value={invoice.currency} />
-              <InfoRow label="Bank Details" value={invoice.bankDetails} />
               <InfoRow label="Payment Terms" value={invoice.paymentTerms} />
             </CardContent>
           </Card>
@@ -333,18 +342,6 @@ export default async function InvoiceDetailPage({
                       currencyActualValue,
                       normalizeComparableValue(currencyExpectedValue) ===
                         normalizeComparableValue(currencyActualValue)
-                    )}
-                  />
-                  <ValidationRow
-                    check="Bank Details"
-                    expected={bankDetailsExpectedValue}
-                    actual={bankDetailsActualValue}
-                    state={validationDisplayState(
-                      bankDetailsExpectedValue,
-                      bankDetailsActualValue,
-                      !invoice.flags.bankDetailsIssue &&
-                        normalizeComparableValue(bankDetailsExpectedValue) ===
-                          normalizeComparableValue(bankDetailsActualValue)
                     )}
                   />
                 </TableBody>
@@ -440,7 +437,6 @@ export default async function InvoiceDetailPage({
                 </div>
               </div>
               <div className="grid gap-2">
-                <Flag label="Bank details issue" active={invoice.flags.bankDetailsIssue} />
                 <Flag label="Amount mismatch" active={invoice.flags.amountMismatch} />
                 <Flag label="Missing fields" active={invoice.flags.missingFields} />
                 <Flag

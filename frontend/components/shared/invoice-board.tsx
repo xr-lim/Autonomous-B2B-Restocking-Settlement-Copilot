@@ -87,6 +87,9 @@ export function InvoiceBoard({ invoices, suppliers }: InvoiceBoardProps) {
         invoice.riskLevel,
         invoice.currency,
         invoice.amount.toString(),
+        invoice.orderId ?? "",
+        invoice.orderStatus ?? "",
+        invoice.workflowState ?? "",
         invoice.linkedSkus.join(" "),
         supplierName(suppliers, invoice.supplierId),
       ]
@@ -297,6 +300,20 @@ function InvoiceWorkCard({
           <p className="text-[13px] text-[#6B7280]">Updated</p>
           <p className="mt-1 text-[13px] font-medium text-[#E5E7EB]">
             {dateFormatter.format(new Date(invoice.lastUpdated))}
+          </p>
+        </div>
+        <div>
+          <p className="text-[13px] text-[#6B7280]">Submitted Order</p>
+          <p className="mt-1 text-[13px] font-medium text-[#E5E7EB]">
+            {invoice.orderId
+              ? `${invoice.orderId}${invoice.orderStatus ? ` · ${invoice.orderStatus}` : ""}`
+              : "Pending negotiation"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[13px] text-[#6B7280]">Workflow State</p>
+          <p className="mt-1 text-[13px] font-medium text-[#E5E7EB]">
+            {invoice.workflowState ?? "Awaiting workflow sync"}
           </p>
         </div>
       </div>

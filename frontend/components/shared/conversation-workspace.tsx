@@ -164,6 +164,9 @@ export function ConversationWorkspace({
   const [isWaitingForAI, setIsWaitingForAI] = useState(false)
   const seenMessageSignaturesRef = useRef<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const autoStartAttemptedRef = useRef(false)
+  const imageUploadInputRef = useRef<HTMLInputElement>(null)
+  const pdfUploadInputRef = useRef<HTMLInputElement>(null)
 
   // Negotiation state
   const [isNegotiating, setIsNegotiating] = useState(false)
@@ -177,10 +180,17 @@ export function ConversationWorkspace({
     return (
       normalizedState === "completed" ||
       normalizedState === "closed" ||
-      conversation.negotiationState === "Closed" ||
-      conversation.status === "resolved"
+      conversation.negotiationState === "Closed"
     )
   }, [conversation])
+
+  const shouldAutoStartNegotiation = useMemo(
+    () =>
+      !isConversationComplete &&
+      (conversation.negotiationState === "New Input" ||
+        conversation.negotiationState === "Needs Analysis"),
+    [conversation.negotiationState, isConversationComplete]
+  )
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -261,13 +271,11 @@ export function ConversationWorkspace({
     return () => { newSocket.disconnect() }
   }, [conversation.id, conversation.supplierId, supplier?.name])
 
-  const handleStartNegotiation = async () => {
+  const handleStartNegotiation = useCallback(async () => {
     if (isConversationComplete) return
     setIsWaitingForAI(true)
     setIsNegotiating(true)
     try {
-      // For now, we'll use a hardcoded restock_request_id. In a real app,
-      // you'd fetch this from the conversation's linked workflow
       const response = await fetch("http://localhost:8000/api/v1/negotiation/start", {
         method: "POST",
         headers: {
@@ -294,13 +302,20 @@ export function ConversationWorkspace({
         // Backend might reply with an empty body or non-JSON; don't crash the UI.
       }
     } catch (error) {
+      autoStartAttemptedRef.current = false
       console.error("Failed to start negotiation:", error)
       alert("Failed to start negotiation. Check console for details.")
       setIsWaitingForAI(false)
     } finally {
       setIsNegotiating(false)
     }
-  }
+  }, [conversation.id, isConversationComplete])
+
+  useEffect(() => {
+    if (!shouldAutoStartNegotiation || autoStartAttemptedRef.current) return
+    autoStartAttemptedRef.current = true
+    void handleStartNegotiation()
+  }, [handleStartNegotiation, shouldAutoStartNegotiation])
 
   const handleSendSupplierReply = async () => {
     if (!supplierReply.trim()) return
@@ -363,6 +378,71 @@ export function ConversationWorkspace({
       setIsSendingReply(false)
     }
   }
+
+  const handleSendSupplierFile = useCallback(
+    async (file: File | null) => {
+      if (!file || isConversationComplete) return
+
+      setIsWaitingForAI(true)
+      setIsSendingReply(true)
+
+      try {
+        const uploadForm = new FormData()
+        uploadForm.append("file", file)
+
+        const uploadResponse = await fetch("http://localhost:8000/api/v1/chat/upload", {
+          method: "POST",
+          body: uploadForm,
+        })
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text().catch(() => "")
+          throw new Error(
+            `Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}${
+              errorText ? `\n${errorText}` : ""
+            }`
+          )
+        }
+
+        const uploadResult = await uploadResponse.json()
+        const response = await fetch("http://localhost:8000/api/v1/negotiation/webhook", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            conversation_id: conversation.id,
+            supplier_message: null,
+            file_url: uploadResult.file_url,
+            file_name: uploadResult.file_name,
+            file_type: uploadResult.file_type,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "")
+          throw new Error(
+            `Failed to send attachment: ${response.status} ${response.statusText}${
+              errorText ? `\n${errorText}` : ""
+            }`
+          )
+        }
+
+        try {
+          await response.json()
+        } catch {
+          // Backend might reply with an empty body or non-JSON; don't crash the UI.
+        }
+      } catch (error) {
+        console.error("Failed to send supplier attachment:", error)
+        alert("Failed to send attachment. Check console for details.")
+        setIsWaitingForAI(false)
+      } finally {
+        setIsSendingReply(false)
+      }
+    },
+    [conversation.id, isConversationComplete]
+  )
 
   const reasoning = useMemo(
     () => buildConversationReasoning(conversation, linkedProducts),
@@ -520,19 +600,32 @@ export function ConversationWorkspace({
                     Z.AI negotiating autonomously with {supplier?.name}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {!isConversationComplete ? (
-                    <Button
-                      type="button"
-                      onClick={handleStartNegotiation}
-                      disabled={isNegotiating || isWaitingForAI}
-                      className="h-8 rounded-[10px] bg-[#10B981] px-3 text-[13px] text-white hover:bg-[#059669]"
-                    >
-                      {isNegotiating ? "Starting..." : "Start Negotiation"}
-                    </Button>
-                  ) : (
-                    <StatusBadge label="Negotiation Complete" tone="success" />
-                  )}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <StatusBadge
+                    label={
+                      isConversationComplete
+                        ? "Negotiation Complete"
+                        : isNegotiating || isWaitingForAI
+                          ? "Negotiation Active"
+                          : conversation.negotiationState
+                    }
+                    tone={
+                      isConversationComplete
+                        ? "success"
+                        : isNegotiating || isWaitingForAI
+                          ? "ai"
+                          : stateTone[conversation.negotiationState]
+                    }
+                  />
+                  {conversation.submittedOrderId ? (
+                    <StatusBadge
+                      label={`Order ${conversation.submittedOrderStatus ?? "Created"}`}
+                      tone="success"
+                    />
+                  ) : null}
+                  {conversation.linkedInvoiceId ? (
+                    <StatusBadge label="Invoice Received" tone="warning" />
+                  ) : null}
                 </div>
               </div>
             </CardHeader>
@@ -601,11 +694,11 @@ export function ConversationWorkspace({
                     onKeyPress={(e) => e.key === 'Enter' && handleSendSupplierReply()}
                     placeholder="Enter supplier's counter-offer or response..."
                     className="flex-1 rounded-[10px] border border-[#243047] bg-[#172033] px-3 py-2 text-[14px] text-[#E5E7EB] outline-none placeholder:text-[#6B7280] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                    disabled={isSendingReply || isWaitingForAI || isConversationComplete}
+                    disabled={isSendingReply || isConversationComplete}
                   />
                   <Button
                     onClick={handleSendSupplierReply}
-                    disabled={isSendingReply || isWaitingForAI || isConversationComplete || !supplierReply.trim()}
+                    disabled={isSendingReply || isConversationComplete || !supplierReply.trim()}
                     className="h-9 rounded-[10px] bg-[#3B82F6] px-4 text-[13px] text-white hover:bg-[#2563EB] disabled:opacity-50"
                   >
                     {isSendingReply ? "Sending..." : "Send Reply"}
@@ -614,14 +707,34 @@ export function ConversationWorkspace({
               </div>
 
               <div className="shrink-0 border-t border-[#243047] bg-[#0B1020] p-4">
-                <textarea
-                  className="mb-3 min-h-[72px] w-full resize-none rounded-[10px] border border-[#243047] bg-[#172033] p-3 text-[15px] text-[#E5E7EB] outline-none placeholder:text-[#6B7280] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20"
-                  placeholder="Optional operator note. Use Interrupt to stop Z.AI before it sends."
+                <input
+                  ref={imageUploadInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    void handleSendSupplierFile(file)
+                    event.currentTarget.value = ""
+                  }}
+                />
+                <input
+                  ref={pdfUploadInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    void handleSendSupplierFile(file)
+                    event.currentTarget.value = ""
+                  }}
                 />
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
+                      onClick={() => imageUploadInputRef.current?.click()}
+                      disabled={isSendingReply || isConversationComplete}
                       className="h-9 rounded-[10px] border-[#243047] bg-[#172033] text-[#E5E7EB] hover:bg-[#243047]"
                     >
                       <ImageIcon className="size-4" aria-hidden="true" />
@@ -629,22 +742,12 @@ export function ConversationWorkspace({
                     </Button>
                     <Button
                       variant="outline"
+                      onClick={() => pdfUploadInputRef.current?.click()}
+                      disabled={isSendingReply || isConversationComplete}
                       className="h-9 rounded-[10px] border-[#243047] bg-[#172033] text-[#E5E7EB] hover:bg-[#243047]"
                     >
                       <FileText className="size-4" aria-hidden="true" />
                       PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-9 rounded-[10px] border-[#243047] bg-[#172033] text-[#E5E7EB] hover:bg-[#243047]"
-                    >
-                      <Mic className="size-4" aria-hidden="true" />
-                      Voice
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button className="h-10 rounded-[10px] bg-[#172033] px-4 text-[#E5E7EB] hover:bg-[#243047]">
-                      View Z.AI Analysis
                     </Button>
                   </div>
                 </div>
@@ -757,6 +860,14 @@ export function ConversationWorkspace({
               <InfoRow
                 label="Negotiation Summary"
                 value={conversation.nextAction.negotiationSummary}
+              />
+              <InfoRow
+                label="Submitted Order"
+                value={
+                  conversation.submittedOrderId
+                    ? `${conversation.submittedOrderId} · ${conversation.submittedOrderStatus ?? "Created"}`
+                    : "Pending supplier acceptance"
+                }
               />
               <div>
                 <p className="text-[13px] text-[#9CA3AF]">

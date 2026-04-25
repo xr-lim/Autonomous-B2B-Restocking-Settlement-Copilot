@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises"
+import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -24,10 +24,34 @@ async function main() {
 
   const schemaPath = path.resolve(__dirname, "../supabase/schema.sql")
   const schemaSql = await readFile(schemaPath, "utf8")
+  const migrationsDir = path.resolve(__dirname, "../supabase/migrations")
 
   if (!schemaSql.trim()) {
     throw new Error("Schema file is empty: backend/supabase/schema.sql")
   }
+
+  const migrationEntries = await readdir(migrationsDir, { withFileTypes: true }).catch(
+    (error) => {
+      if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+        return []
+      }
+      throw error
+    }
+  )
+  const migrationFiles = migrationEntries
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".sql"))
+    .map((entry) => entry.name)
+    .sort((first, second) => first.localeCompare(second))
+  const migrationSqls = await Promise.all(
+    migrationFiles.map(async (fileName) => {
+      const filePath = path.join(migrationsDir, fileName)
+      const sql = await readFile(filePath, "utf8")
+      return {
+        fileName,
+        sql,
+      }
+    })
+  )
 
   if (/\bdrop\s+(table|column)\b/i.test(schemaSql)) {
     console.warn(
@@ -48,6 +72,11 @@ async function main() {
   try {
     await client.query("BEGIN")
     await client.query(schemaSql)
+    for (const migration of migrationSqls) {
+      if (!migration.sql.trim()) continue
+      await client.query(migration.sql)
+      console.log(`Applied migration: ${migration.fileName}`)
+    }
     await client.query("COMMIT")
     console.log("Schema initialization completed successfully.")
   } catch (error) {

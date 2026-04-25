@@ -14,9 +14,52 @@ $$;
 alter table public.products
   add column if not exists current_threshold integer;
 
-update public.products
-set current_threshold = coalesce(ai_threshold, static_threshold, current_threshold, 0)
-where current_threshold is null;
+do $$
+declare
+  has_ai_threshold boolean;
+  has_static_threshold boolean;
+begin
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'products'
+      and column_name = 'ai_threshold'
+  ) into has_ai_threshold;
+
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'products'
+      and column_name = 'static_threshold'
+  ) into has_static_threshold;
+
+  if has_ai_threshold and has_static_threshold then
+    execute $sql$
+      update public.products
+      set current_threshold = coalesce(ai_threshold, static_threshold, current_threshold, 0)
+      where current_threshold is null
+    $sql$;
+  elsif has_ai_threshold then
+    execute $sql$
+      update public.products
+      set current_threshold = coalesce(ai_threshold, current_threshold, 0)
+      where current_threshold is null
+    $sql$;
+  elsif has_static_threshold then
+    execute $sql$
+      update public.products
+      set current_threshold = coalesce(static_threshold, current_threshold, 0)
+      where current_threshold is null
+    $sql$;
+  else
+    update public.products
+    set current_threshold = coalesce(current_threshold, 0)
+    where current_threshold is null;
+  end if;
+end
+$$;
 
 alter table public.products
   alter column current_threshold set not null;

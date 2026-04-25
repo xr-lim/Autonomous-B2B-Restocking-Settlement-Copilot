@@ -67,15 +67,19 @@ export type InvoiceAnalysisInvoiceData = {
 }
 
 export type InvoiceAnalysisExpectedData = {
+  expectedOrderId?: string | null
   workflowState?: string | null
   conversationState?: string | null
   expectedSupplierId?: string | null
   expectedSupplierName?: string | null
   expectedQuantity?: number | null
+  expectedUnitPrice?: number | null
   targetUnitPriceMin?: number | null
   targetUnitPriceMax?: number | null
+  expectedAmount?: number | null
   expectedAmountMin?: number | null
   expectedAmountMax?: number | null
+  expectedCurrency?: string | null
   expectedBankDetails?: string | null
   expectedPaymentTerms?: string | null
   referenceInvoiceNumber?: string | null
@@ -752,7 +756,7 @@ export function applyParsedFieldsToInvoiceData(
   parsedFields: InvoiceAnalysisParsedFields
 ): InvoiceAnalysisInvoiceData {
   const repairedCurrency =
-    parsedFields.currency ?? normalizeCurrency(invoiceData.currency) ?? "USD"
+    parsedFields.currency ?? normalizeCurrency(invoiceData.currency) ?? "MYR"
   const parsedLineItems = parsedFields.lineItems.filter(
     (item) =>
       item.quantity != null ||
@@ -1012,6 +1016,37 @@ export function analyzeInvoiceWithFallback(
       type: "amount_mismatch",
       description: `Amount is outside the expected range ${formatCurrency(expectedData.expectedAmountMin, repairedInvoiceData.currency)} to ${formatCurrency(expectedData.expectedAmountMax, repairedInvoiceData.currency)}.`,
       severity: varianceRatio >= 0.08 ? "high" : "medium",
+    })
+  }
+
+  if (
+    expectedData.expectedCurrency &&
+    repairedInvoiceData.currency &&
+    cleanText(expectedData.expectedCurrency) !== cleanText(repairedInvoiceData.currency)
+  ) {
+    addIssue(issues, {
+      type: "suspicious_value",
+      description: `Currency mismatch: expected ${expectedData.expectedCurrency}, got ${repairedInvoiceData.currency}.`,
+      severity: "high",
+    })
+  }
+
+  if (
+    expectedData.expectedUnitPrice != null &&
+    avgUnitPrice != null &&
+    Math.abs(avgUnitPrice - expectedData.expectedUnitPrice) /
+      Math.max(expectedData.expectedUnitPrice, 0.01) >=
+      0.03
+  ) {
+    addIssue(issues, {
+      type: "suspicious_value",
+      description: `Average unit price ${formatCurrency(avgUnitPrice, repairedInvoiceData.currency)} differs from the submitted order price ${formatCurrency(expectedData.expectedUnitPrice, repairedInvoiceData.currency)}.`,
+      severity:
+        Math.abs(avgUnitPrice - expectedData.expectedUnitPrice) /
+          Math.max(expectedData.expectedUnitPrice, 0.01) >=
+        0.1
+          ? "high"
+          : "medium",
     })
   }
 
