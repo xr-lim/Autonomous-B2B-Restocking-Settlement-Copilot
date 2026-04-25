@@ -82,14 +82,14 @@ Bee2Bee follows a **modular, workflow-driven architecture**:
 - **Frontend:** Dashboard UI  
 - **Backend:** API & orchestration  
 - **Workflow Engine:** Stateful execution (Temporal)  
-- **AI Layer:** Decision-making (Z.AI GLM)  
+- **AI Layer:** Decision-making (Gemini 2.5 Flash) 
 - **Database:** Persistent storage (Supabase)  
 
 ---
 
 ## 🧠 AI Integration (Core Innovation)
 
-The system leverages **Z.AI GLM** as a reasoning engine:
+The system leverages **Gemini 2.5 Flash** as a reasoning engine:
 
 - Multi-step decision making  
 - Structured JSON outputs  
@@ -97,7 +97,7 @@ The system leverages **Z.AI GLM** as a reasoning engine:
 - Context-aware negotiation  
 
 ### Prompt Flow: 
-Data → Prompt Builder → GLM → Structured Output → Workflow Engine
+Data → Prompt Builder → Gemini 2.5 Flash → Structured Output → Workflow Engine
 
 
 ---
@@ -126,14 +126,11 @@ Data → Prompt Builder → GLM → Structured Output → Workflow Engine
 ### Backend
 - FastAPI (Python)
 
-### Workflow Engine
-- Temporal (stateful orchestration)
-
 ### Database & Storage
 - Supabase (PostgreSQL + Storage)
 
 ### AI Layer
-- Z.AI GLM API
+- Gemini 2.5 Flash 
 
 ### Real-Time
 - WebSockets / Supabase Realtime
