@@ -7,6 +7,14 @@
 ### Pitching video:
 link: https://drive.google.com/file/d/1rx-pVQoGYBLK321onvQKFunZYgv5PA2t/view?usp=drive_link
 
+### Documentation:
+PRD: https://github.com/xr-lim/Bee2Bee-Autonomous-B2B-Restocking-Settlement-Copilot/blob/main/Bee2Bee%20PRD.pdf
+QATD: https://github.com/xr-lim/Bee2Bee-Autonomous-B2B-Restocking-Settlement-Copilot/blob/main/Bee2Bee%20QATD.pdf
+SAD: https://github.com/xr-lim/Bee2Bee-Autonomous-B2B-Restocking-Settlement-Copilot/blob/main/Bee2Bee%20SAD.pdf
+
+### Pitching Deck:
+https://github.com/xr-lim/Bee2Bee-Autonomous-B2B-Restocking-Settlement-Copilot/blob/main/Pitch%20Deck%20Bee2Bee%20Autonomous%20B2B%20Restocking%20%26%20Settlement%20Copilot%20(1).pdf
+
 ## 📌 Overview
 
 Bee2Bee is an **AI-driven, stateful procurement system** designed to eliminate manual inefficiencies in restocking workflows. It transforms fragmented and unstructured inputs — such as supplier messages, PDFs, and invoices — into structured, automated decision-making pipelines.
